@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>下川町たんていクイズ</title>
+<style>
+body{
+  font-family:sans-serif;
+  background:#5a3e2b;
+  color:#fff;
+  text-align:center;
+  padding:20px;
+}
+.card{
+  background:#f5e6d3;
+  color:#333;
+  padding:20px;
+  border-radius:10px;
+  margin:10px auto;
+  max-width:400px;
+}
+button{
+  display:block;
+  width:100%;
+  margin:10px 0;
+  padding:10px;
+  font-size:16px;
+  border:none;
+  border-radius:5px;
+  background:#2b6cb0;
+  color:#fff;
+}
+button:hover{background:#1e4e8c;}
+</style>
+</head>
+
+<body>
+
+<h1>🕵️ 下川町たんていクイズ</h1>
+<p>きみは何問とけるかな？</p>
+
+<div id="quiz" class="card"></div>
+
+<script>
+const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&single=true&output=csv";
+
+let questions = [];
+let current = 0;
+let score = 0;
+
+fetch(url)
+.then(res=>res.text())
+.then(data=>{
+  const rows = data.split("\n").slice(1);
+  questions = rows.map(r=>{
+    const c = r.split(",");
+    return {
+      q:c[0],
+      choices:[c[1],c[2],c[3]],
+      answer:c[4],
+      explanation:c[5]
+    };
+  });
+
+  questions = questions.sort(()=>0.5-Math.random()).slice(0,5);
+  showQuestion();
+});
+
+function showQuestion(){
+  const q = questions[current];
+  const div = document.getElementById("quiz");
+
+  let html = "<h2>"+q.q+"</h2>";
+
+  ["A","B","C"].forEach((l,i)=>{
+    html += `<button onclick="answer('${l}')">${q.choices[i]}</button>`;
+  });
+
+  div.innerHTML = html;
+}
+
+function answer(a){
+  const q = questions[current];
+  const div = document.getElementById("quiz");
+
+  if(a===q.answer){
+    div.innerHTML = "<h2>ピンポーン！🎉</h2>";
+    score++;
+  }else{
+    div.innerHTML = "<h2>ざんねん…😢</h2>";
+  }
+
+  div.innerHTML += "<p>"+q.explanation+"</p>";
+  div.innerHTML += "<button onclick='next()'>つぎへ</button>";
+}
+
+function next(){
+  current++;
+  if(current<questions.length){
+    showQuestion();
+  }else{
+    document.getElementById("quiz").innerHTML =
+      "<h2>けっか："+score+" / 5 問せいかい！</h2>";
+  }
+}
+</script>
+
+</body>
+</html>
