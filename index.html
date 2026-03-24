@@ -2,7 +2,11 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>五味おんせん推理録</title>
+
+<!-- ★ モバイル最適化 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ごみおんせん推理録</title>
 
 <style>
 body{
@@ -19,16 +23,17 @@ body{
 
   color:#fff;
   text-align:center;
-  padding:20px;
+  padding:15px;
+  margin:0;
 }
 
 /* タイトル */
 h1{
-  font-size:30px;
-  letter-spacing:3px;
+  font-size:24px;
+  letter-spacing:2px;
 }
 
-/* グレーゲージ */
+/* ゲージ */
 .gauge-wrap{
   width:100%;
   max-width:420px;
@@ -36,12 +41,12 @@ h1{
   background:#555;
   border-radius:10px;
   overflow:hidden;
-  height:12px;
+  height:10px;
 }
 .gauge{
   height:100%;
   width:0%;
-  background:#aaa; /* ← グレー */
+  background:#aaa;
   transition:0.4s;
 }
 
@@ -49,22 +54,22 @@ h1{
 .card{
   background:#f4f1ea;
   color:#111;
-  padding:25px;
+  padding:15px;
   border-radius:5px;
-  margin:20px auto;
+  margin:15px auto;
   max-width:420px;
-  border:4px solid #3b2a1a;
+  border:3px solid #3b2a1a;
 }
 
 /* ボタン */
 button{
   display:block;
   width:100%;
-  margin:10px 0;
-  padding:12px;
+  margin:8px 0;
+  padding:14px;
   font-size:16px;
   border:none;
-  border-radius:3px;
+  border-radius:5px;
   background:#2f2f2f;
   color:#fff;
 }
@@ -73,17 +78,18 @@ button:hover{
   background:#8b0000;
 }
 
-/* 正解演出 */
+/* 正解 */
 .big-circle{
-  width:120px;
-  height:120px;
+  width:100px;
+  height:100px;
   border-radius:50%;
-  border:10px solid #b30000;
+  border:8px solid #b30000;
   margin:10px auto;
 }
 
+/* 不正解 */
 .big-x{
-  font-size:80px;
+  font-size:70px;
   color:#555;
 }
 
@@ -102,12 +108,38 @@ button:hover{
   background:#777;
   color:#fff;
 }
+
+/* ⭐ ランク表示（ここが進化ポイント） */
+.result-box{
+  padding:20px;
+  margin-top:10px;
+  border:3px solid #8b0000;
+  background:#111;
+  color:#fff;
+  border-radius:10px;
+  animation:fadeIn 0.5s ease;
+}
+
+.rank{
+  font-size:28px;
+  font-weight:bold;
+  color:#ff4444;
+  margin-top:10px;
+  letter-spacing:2px;
+  text-shadow:0 0 10px rgba(255,0,0,0.7);
+}
+
+/* アニメーション */
+@keyframes fadeIn{
+  from{opacity:0; transform:scale(0.9);}
+  to{opacity:1; transform:scale(1);}
+}
 </style>
 </head>
 
 <body>
 
-<h1>五味おんせん推理録</h1>
+<h1>ごみおんせん推理録</h1>
 
 <div class="gauge-wrap">
   <div id="gauge" class="gauge"></div>
@@ -122,7 +154,7 @@ let questions = [];
 let current = 0;
 let score = 0;
 
-/* CSVパース */
+/* CSV */
 function parseCSV(text){
   const rows = [];
   let row = [];
@@ -148,11 +180,10 @@ function parseCSV(text){
   }
   row.push(cell);
   rows.push(row);
-
   return rows;
 }
 
-/* 全角→半角変換 */
+/* 正規化（最重要） */
 function normalize(str){
   return (str || "")
     .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 65248))
@@ -172,23 +203,21 @@ fetch(url)
       return {
         q:c[0],
         choices:[c[1],c[2],c[3]],
-        answer: normalize(c[4]), // ← 完全対策
+        answer: normalize(c[4]),
         explanation:c[5]
       };
     });
 
-  questions = questions.sort(()=>0.5-Math.random()).slice(0,10); // ← 10問
+  questions = questions.sort(()=>0.5-Math.random()).slice(0,10);
 
   showQuestion();
 });
 
-/* ゲージ */
 function updateGauge(){
   const percent = (current / questions.length) * 100;
   document.getElementById("gauge").style.width = percent + "%";
 }
 
-/* 問題 */
 function showQuestion(){
   updateGauge();
 
@@ -202,7 +231,6 @@ function showQuestion(){
   document.getElementById("quiz").innerHTML = html;
 }
 
-/* 回答 */
 function answer(a){
   const q = questions[current];
   const user = normalize(a);
@@ -232,7 +260,6 @@ function answer(a){
   document.getElementById("quiz").innerHTML = html;
 }
 
-/* 次へ */
 function next(){
   current++;
 
@@ -249,9 +276,11 @@ function next(){
     else rank = "気にしないで。";
 
     document.getElementById("quiz").innerHTML =
-      `<h2>結果</h2>
-       <p>${score} / 10</p>
-       <p>${rank}</p>`;
+      `<div class="result-box">
+        <h2>捜査完了</h2>
+        <p>${score} / 10</p>
+        <div class="rank">${rank}</div>
+      </div>`;
   }
 }
 </script>
