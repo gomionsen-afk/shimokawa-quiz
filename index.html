@@ -2,11 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>五味おんせん推理クイズ</title>
+<title>ごみおんせん推理録</title>
 
 <style>
-
-/* フォント設定（優先順） */
 body{
   font-family:
     "DFKyougekiTai",
@@ -32,7 +30,7 @@ h1{
 }
 
 .subtitle{
-  color:#d0d0d0;
+  color:#ccc;
   margin-bottom:20px;
 }
 
@@ -50,7 +48,7 @@ h1{
   position:relative;
 }
 
-/* ファイルラベル */
+/* ラベル */
 .card::before{
   content:"事件ファイル";
   position:absolute;
@@ -61,12 +59,6 @@ h1{
   padding:4px 10px;
   font-size:12px;
   border-radius:3px;
-}
-
-/* 問題 */
-h2{
-  font-size:20px;
-  margin-bottom:20px;
 }
 
 /* ボタン */
@@ -90,20 +82,6 @@ button:hover{
   transform:scale(1.04);
 }
 
-/* 正解 */
-.correct{
-  color:#8b0000;
-  font-size:22px;
-  font-weight:bold;
-}
-
-/* 不正解 */
-.wrong{
-  color:#444;
-  font-size:20px;
-}
-
-/* 次へ */
 .next-btn{
   background:#8b0000;
 }
@@ -112,12 +90,44 @@ button:hover{
   background:#5a0000;
 }
 
-/* ランク */
-.rank{
-  margin-top:10px;
-  font-size:18px;
+/* 結果表示 */
+.correct{
+  color:#8b0000;
+  font-size:24px;
+  font-weight:bold;
 }
 
+.wrong{
+  color:#444;
+  font-size:22px;
+}
+
+/* 選択肢結果 */
+.choice{
+  padding:10px;
+  margin:5px;
+  border-radius:5px;
+  border:1px solid #ccc;
+}
+
+.choice.correct{
+  background:#8b0000;
+  color:#fff;
+}
+
+.choice.wrong{
+  background:#777;
+  color:#fff;
+}
+
+/* フラッシュ演出 */
+.flash{
+  animation:flash 0.3s;
+}
+@keyframes flash{
+  0%{background:#fff;}
+  100%{background:transparent;}
+}
 </style>
 </head>
 
@@ -135,16 +145,46 @@ let questions = [];
 let current = 0;
 let score = 0;
 
+/* CSV安全パース（カンマ対策） */
+function parseCSV(text){
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for(let i=0;i<text.length;i++){
+    const char = text[i];
+
+    if(char === '"'){
+      inQuotes = !inQuotes;
+    }else if(char === ',' && !inQuotes){
+      row.push(cell);
+      cell = "";
+    }else if(char === '\n' && !inQuotes){
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    }else{
+      cell += char;
+    }
+  }
+  row.push(cell);
+  rows.push(row);
+
+  return rows;
+}
+
 fetch(url)
 .then(res=>res.text())
 .then(data=>{
-  const rows = data.split("\n").slice(1);
-  questions = rows.map(r=>{
-    const c = r.split(",");
+  const rows = parseCSV(data).slice(1);
+
+  questions = rows.map(c=>{
     return {
       q:c[0],
       choices:[c[1],c[2],c[3]],
-      answer:c[4],
+      answer:(c[4] || "").trim().toUpperCase(), // ← バグ対策
       explanation:c[5]
     };
   });
@@ -170,15 +210,39 @@ function answer(a){
   const q = questions[current];
   const div = document.getElementById("quiz");
 
-  if(a===q.answer){
-    div.innerHTML = "<div class='correct'>…真実は一つだ。</div>";
+  const userAnswer = a.trim().toUpperCase();
+
+  let html = "";
+
+  if(userAnswer === q.answer){
     score++;
+    html += "<div class='correct'>✔ 正解！真実は一つだ。</div>";
+    div.classList.add("flash");
   }else{
-    div.innerHTML = "<div class='wrong'>推理が甘いな…</div>";
+    html += "<div class='wrong'>✖ 不正解…推理が甘いな</div>";
   }
 
-  div.innerHTML += `<p>${q.explanation}</p>`;
-  div.innerHTML += "<button class='next-btn' onclick='next()'>次の事件</button>";
+  html += `<p><b>あなたの答え：</b> ${userAnswer}</p>`;
+  html += `<p><b>正解：</b> ${q.answer}</p>`;
+
+  ["A","B","C"].forEach((l,i)=>{
+    let cls = "choice";
+
+    if(l === q.answer){
+      cls += " correct";
+    }else if(l === userAnswer){
+      cls += " wrong";
+    }
+
+    html += `<div class="${cls}">${l}: ${q.choices[i]}</div>`;
+  });
+
+  html += `<p style="margin-top:10px;">${q.explanation}</p>`;
+  html += "<button class='next-btn' onclick='next()'>次の事件</button>";
+
+  div.innerHTML = html;
+
+  setTimeout(()=>div.classList.remove("flash"),300);
 }
 
 function next(){
@@ -189,12 +253,12 @@ function next(){
     document.getElementById("quiz").innerHTML =
       `<h2>捜査終了</h2>
        <p>${score} / 5 正解</p>
-       <div class="rank">
+       <p>
        ${score>=4?"Sランク（名探偵）":
          score>=3?"Aランク（有望）":
          score>=2?"Bランク（見習い）":
          "Cランク（修行中）"}
-       </div>`;
+       </p>`;
   }
 }
 </script>
