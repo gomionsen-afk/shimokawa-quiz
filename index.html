@@ -2,42 +2,129 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>五味クイズ</title>
+<title>五味おんせん推理クイズ</title>
+
 <style>
+
+/* フォント設定（優先順） */
 body{
-  font-family:sans-serif;
-  background:#5a3e2b;
+  font-family:
+    "DFKyougekiTai",
+    "秀英アンチック",
+    "Hiragino Mincho ProN",
+    "Yu Mincho",
+    serif;
+
+  background:
+    linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.6)),
+    url("https://www.transparenttextures.com/patterns/brick-wall.png");
+
   color:#fff;
   text-align:center;
   padding:20px;
 }
-.card{
-  background:#f5e6d3;
-  color:#333;
-  padding:20px;
-  border-radius:10px;
-  margin:10px auto;
-  max-width:400px;
+
+/* タイトル */
+h1{
+  font-size:30px;
+  letter-spacing:3px;
+  text-shadow:2px 2px 4px #000;
 }
+
+.subtitle{
+  color:#d0d0d0;
+  margin-bottom:20px;
+}
+
+/* カード */
+.card{
+  background:#f4f1ea;
+  color:#111;
+  padding:25px;
+  border-radius:5px;
+  margin:20px auto;
+  max-width:420px;
+
+  border:4px solid #3b2a1a;
+  box-shadow:0 0 20px rgba(0,0,0,0.8);
+  position:relative;
+}
+
+/* ファイルラベル */
+.card::before{
+  content:"事件ファイル";
+  position:absolute;
+  top:-14px;
+  left:15px;
+  background:#8b0000;
+  color:#fff;
+  padding:4px 10px;
+  font-size:12px;
+  border-radius:3px;
+}
+
+/* 問題 */
+h2{
+  font-size:20px;
+  margin-bottom:20px;
+}
+
+/* ボタン */
 button{
   display:block;
   width:100%;
   margin:10px 0;
-  padding:10px;
+  padding:12px;
   font-size:16px;
   border:none;
-  border-radius:5px;
-  background:#2b6cb0;
+  border-radius:3px;
+
+  background:#2f2f2f;
   color:#fff;
+  cursor:pointer;
+  transition:0.2s;
 }
-button:hover{background:#1e4e8c;}
+
+button:hover{
+  background:#8b0000;
+  transform:scale(1.04);
+}
+
+/* 正解 */
+.correct{
+  color:#8b0000;
+  font-size:22px;
+  font-weight:bold;
+}
+
+/* 不正解 */
+.wrong{
+  color:#444;
+  font-size:20px;
+}
+
+/* 次へ */
+.next-btn{
+  background:#8b0000;
+}
+
+.next-btn:hover{
+  background:#5a0000;
+}
+
+/* ランク */
+.rank{
+  margin-top:10px;
+  font-size:18px;
+}
+
 </style>
 </head>
 
 <body>
 
-<h1>ごみおんせんクイズ</h1>
-<p>きみは何問とけるかな？</p>
+<h1>ごみおんせん推理録</h1>
+<p class="subtitle">―― 真相を見抜けるか ――</p>
 
 <div id="quiz" class="card"></div>
 
@@ -70,7 +157,7 @@ function showQuestion(){
   const q = questions[current];
   const div = document.getElementById("quiz");
 
-  let html = "<h2>"+q.q+"</h2>";
+  let html = `<h2>第${current+1}問：${q.q}</h2>`;
 
   ["A","B","C"].forEach((l,i)=>{
     html += `<button onclick="answer('${l}')">${q.choices[i]}</button>`;
@@ -84,14 +171,14 @@ function answer(a){
   const div = document.getElementById("quiz");
 
   if(a===q.answer){
-    div.innerHTML = "<h2>ピンポーン！🎉</h2>";
+    div.innerHTML = "<div class='correct'>…真実は一つだ。</div>";
     score++;
   }else{
-    div.innerHTML = "<h2>ざんねん…😢</h2>";
+    div.innerHTML = "<div class='wrong'>推理が甘いな…</div>";
   }
 
-  div.innerHTML += "<p>"+q.explanation+"</p>";
-  div.innerHTML += "<button onclick='next()'>つぎへ</button>";
+  div.innerHTML += `<p>${q.explanation}</p>`;
+  div.innerHTML += "<button class='next-btn' onclick='next()'>次の事件</button>";
 }
 
 function next(){
@@ -100,7 +187,14 @@ function next(){
     showQuestion();
   }else{
     document.getElementById("quiz").innerHTML =
-      "<h2>けっか："+score+" / 5 問せいかい！</h2>";
+      `<h2>捜査終了</h2>
+       <p>${score} / 5 正解</p>
+       <div class="rank">
+       ${score>=4?"Sランク（名探偵）":
+         score>=3?"Aランク（有望）":
+         score>=2?"Bランク（見習い）":
+         "Cランク（修行中）"}
+       </div>`;
   }
 }
 </script>
