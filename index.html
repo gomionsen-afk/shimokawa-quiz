@@ -2,10 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-
-<!-- ★ モバイル最適化 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>ごみおんせん推理録</title>
 
 <style>
@@ -27,15 +24,9 @@ body{
   margin:0;
 }
 
-/* タイトル */
-h1{
-  font-size:24px;
-  letter-spacing:2px;
-}
+h1{font-size:24px;}
 
-/* ゲージ */
 .gauge-wrap{
-  width:100%;
   max-width:420px;
   margin:10px auto;
   background:#555;
@@ -50,7 +41,6 @@ h1{
   transition:0.4s;
 }
 
-/* カード */
 .card{
   background:#f4f1ea;
   color:#111;
@@ -58,12 +48,9 @@ h1{
   border-radius:5px;
   margin:15px auto;
   max-width:420px;
-  border:3px solid #3b2a1a;
 }
 
-/* ボタン */
 button{
-  display:block;
   width:100%;
   margin:8px 0;
   padding:14px;
@@ -74,11 +61,6 @@ button{
   color:#fff;
 }
 
-button:hover{
-  background:#8b0000;
-}
-
-/* 正解 */
 .big-circle{
   width:100px;
   height:100px;
@@ -87,52 +69,31 @@ button:hover{
   margin:10px auto;
 }
 
-/* 不正解 */
 .big-x{
   font-size:70px;
   color:#555;
 }
 
-/* 選択肢 */
 .choice{
   padding:10px;
   margin:5px;
   border-radius:5px;
   border:1px solid #ccc;
 }
-.choice.correct{
-  background:#8b0000;
-  color:#fff;
-}
-.choice.wrong{
-  background:#777;
-  color:#fff;
-}
+.choice.correct{background:#8b0000;color:#fff;}
+.choice.wrong{background:#777;color:#fff;}
 
-/* ⭐ ランク表示（ここが進化ポイント） */
 .result-box{
   padding:20px;
-  margin-top:10px;
   border:3px solid #8b0000;
   background:#111;
-  color:#fff;
   border-radius:10px;
-  animation:fadeIn 0.5s ease;
 }
 
 .rank{
   font-size:28px;
-  font-weight:bold;
   color:#ff4444;
   margin-top:10px;
-  letter-spacing:2px;
-  text-shadow:0 0 10px rgba(255,0,0,0.7);
-}
-
-/* アニメーション */
-@keyframes fadeIn{
-  from{opacity:0; transform:scale(0.9);}
-  to{opacity:1; transform:scale(1);}
 }
 </style>
 </head>
@@ -153,135 +114,169 @@ const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-Qobm
 let questions = [];
 let current = 0;
 let score = 0;
+let isBonus = false;
+
+/* ★ ボーナス問題 */
+const bonusQuestion = {
+  q: "五味温泉を一言で表すと？",
+  choices: ["最高", "神", "五味温泉！！"],
+  answer: "C",
+  explanation: "ここまで来たあなたは真のファンです。"
+};
 
 /* CSV */
 function parseCSV(text){
   const rows = [];
-  let row = [];
-  let cell = "";
-  let inQuotes = false;
+  let row=[], cell="", inQuotes=false;
 
   for(let i=0;i<text.length;i++){
-    const char = text[i];
-
-    if(char === '"'){
-      inQuotes = !inQuotes;
-    }else if(char === ',' && !inQuotes){
-      row.push(cell);
-      cell = "";
-    }else if(char === '\n' && !inQuotes){
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-    }else{
-      cell += char;
-    }
+    const c=text[i];
+    if(c=='"'){inQuotes=!inQuotes;}
+    else if(c==','&&!inQuotes){row.push(cell);cell="";}
+    else if(c=='\n'&&!inQuotes){row.push(cell);rows.push(row);row=[];cell="";}
+    else{cell+=c;}
   }
-  row.push(cell);
-  rows.push(row);
+  row.push(cell); rows.push(row);
   return rows;
 }
 
 /* 正規化（最重要） */
 function normalize(str){
-  return (str || "")
-    .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 65248))
+  return (str||"")
+    .replace(/[Ａ-Ｚ]/g,s=>String.fromCharCode(s.charCodeAt(0)-65248))
     .trim()
     .toUpperCase();
 }
 
 fetch(url)
-.then(res=>res.text())
+.then(r=>r.text())
 .then(data=>{
-  const rows = parseCSV(data).slice(1);
+  const rows=parseCSV(data).slice(1);
 
   questions = rows
-    .map(c => c.map(v => (v || "").trim()))
-    .filter(c => c[0] && c[4])
-    .map(c=>{
-      return {
-        q:c[0],
-        choices:[c[1],c[2],c[3]],
-        answer: normalize(c[4]),
-        explanation:c[5]
-      };
-    });
+    .map(c=>c.map(v=>(v||"").trim()))
+    .filter(c=>c[0]&&c[4])
+    .map(c=>({
+      q:c[0],
+      choices:[c[1],c[2],c[3]],
+      answer:normalize(c[4]),
+      explanation:c[5]
+    }));
 
   questions = questions.sort(()=>0.5-Math.random()).slice(0,10);
-
   showQuestion();
 });
 
+/* ゲージ */
 function updateGauge(){
-  const percent = (current / questions.length) * 100;
-  document.getElementById("gauge").style.width = percent + "%";
+  document.getElementById("gauge").style.width =
+    (current/questions.length*100)+"%";
 }
 
+/* 問題表示 */
 function showQuestion(){
   updateGauge();
 
-  const q = questions[current];
-  let html = `<h2>第${current+1}問：${q.q}</h2>`;
+  const q=questions[current];
+  let html=`<h2>第${current+1}問：${q.q}</h2>`;
 
   ["A","B","C"].forEach((l,i)=>{
-    html += `<button onclick="answer('${l}')">${q.choices[i]}</button>`;
+    html+=`<button onclick="answer('${l}')">${q.choices[i]}</button>`;
   });
 
-  document.getElementById("quiz").innerHTML = html;
+  document.getElementById("quiz").innerHTML=html;
 }
 
+/* 回答 */
 function answer(a){
-  const q = questions[current];
-  const user = normalize(a);
+  const q=questions[current];
+  const user=normalize(a);
 
-  let html = "";
+  let html="";
 
-  if(user === q.answer){
+  if(user===q.answer){
     score++;
-    html += "<div class='big-circle'></div><h2>正解！</h2>";
+    html+="<div class='big-circle'></div><h2>正解！</h2>";
   }else{
-    html += "<div class='big-x'>×</div><h2>不正解</h2>";
+    html+="<div class='big-x'>×</div><h2>不正解</h2>";
   }
 
-  html += `<p>あなた：${user} ／ 正解：${q.answer}</p>`;
+  html+=`<p>あなた：${user} ／ 正解：${q.answer}</p>`;
 
   ["A","B","C"].forEach((l,i)=>{
-    let cls = "choice";
-    if(l === q.answer) cls += " correct";
-    else if(l === user) cls += " wrong";
-
-    html += `<div class="${cls}">${l}: ${q.choices[i]}</div>`;
+    let cls="choice";
+    if(l===q.answer) cls+=" correct";
+    else if(l===user) cls+=" wrong";
+    html+=`<div class="${cls}">${l}: ${q.choices[i]}</div>`;
   });
 
-  html += `<p>${q.explanation}</p>`;
-  html += "<button onclick='next()'>次へ</button>";
+  html+=`<p>${q.explanation}</p>`;
+  html+="<button onclick='next()'>次へ</button>";
 
-  document.getElementById("quiz").innerHTML = html;
+  document.getElementById("quiz").innerHTML=html;
 }
 
+/* 次へ */
 function next(){
   current++;
 
-  if(current < questions.length){
+  // ★ 全問正解ならボーナス
+  if(current===questions.length && score===questions.length && !isBonus){
+    isBonus=true;
+    showBonus();
+    return;
+  }
+
+  if(current<questions.length){
     showQuestion();
   }else{
-    document.getElementById("gauge").style.width = "100%";
-
-    let rank = "";
-    if(score === 10) rank = "名探偵";
-    else if(score >= 8) rank = "まあ探偵";
-    else if(score >= 5) rank = "眠りの小五郎";
-    else if(score >= 3) rank = "・・・・";
-    else rank = "気にしないで。";
-
-    document.getElementById("quiz").innerHTML =
-      `<div class="result-box">
-        <h2>捜査完了</h2>
-        <p>${score} / 10</p>
-        <div class="rank">${rank}</div>
-      </div>`;
+    showResult();
   }
+}
+
+/* ★ ボーナス表示 */
+function showBonus(){
+  let html="<h2>★ 最終問題 ★</h2>";
+  html+=`<p>${bonusQuestion.q}</p>`;
+
+  ["A","B","C"].forEach((l,i)=>{
+    html+=`<button onclick="answerBonus('${l}')">${bonusQuestion.choices[i]}</button>`;
+  });
+
+  document.getElementById("quiz").innerHTML=html;
+}
+
+/* ★ ボーナス回答 */
+function answerBonus(a){
+  let html="";
+
+  if(a===bonusQuestion.answer){
+    html+="<div class='big-circle'></div><h2>完全制覇！！</h2>";
+    html+="<p>真の名探偵認定</p>";
+  }else{
+    html+="<div class='big-x'>×</div><h2>惜しい…！</h2>";
+  }
+
+  document.getElementById("quiz").innerHTML=html;
+}
+
+/* 結果 */
+function showResult(){
+  document.getElementById("gauge").style.width="100%";
+
+  let rank="";
+  if(score===10) rank="名探偵";
+  else if(score>=8) rank="まあ探偵";
+  else if(score>=5) rank="眠りの小五郎";
+  else if(score>=3) rank="・・・・";
+  else rank="気にしないで。";
+
+  document.getElementById("quiz").innerHTML=
+  `<div class="result-box">
+    <h2>捜査完了</h2>
+    <p>${score} / 10</p>
+    <div class="rank">${rank}</div>
+  </div>`;
 }
 </script>
 
