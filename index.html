@@ -2,24 +2,38 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>ごみおんせん推理録</title>
 
+<!-- ★ モバイル最適化 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ごみおんせん推理録</title>
 
 <style>
 body{
-  background:#1a1a1a;
+  font-family:
+    "DFKyougekiTai",
+    "秀英アンチック",
+    "Hiragino Mincho ProN",
+    "Yu Mincho",
+    serif;
+
+  background:
+    linear-gradient(rgba(60,40,20,0.7),rgba(60,40,20,0.7)),
+    url("https://www.transparenttextures.com/patterns/brick-wall-dark.png");
+
   color:#fff;
   text-align:center;
   padding:15px;
   margin:0;
 }
 
+/* タイトル */
 h1{
   font-size:24px;
   letter-spacing:2px;
 }
 
+/* ゲージ */
 .gauge-wrap{
   width:100%;
   max-width:420px;
@@ -36,6 +50,7 @@ h1{
   transition:0.4s;
 }
 
+/* カード */
 .card{
   background:#f4f1ea;
   color:#111;
@@ -46,6 +61,7 @@ h1{
   border:3px solid #3b2a1a;
 }
 
+/* ボタン */
 button{
   display:block;
   width:100%;
@@ -62,6 +78,7 @@ button:hover{
   background:#8b0000;
 }
 
+/* 正解 */
 .big-circle{
   width:100px;
   height:100px;
@@ -70,11 +87,29 @@ button:hover{
   margin:10px auto;
 }
 
+/* 不正解 */
 .big-x{
   font-size:70px;
   color:#555;
 }
 
+/* 選択肢 */
+.choice{
+  padding:10px;
+  margin:5px;
+  border-radius:5px;
+  border:1px solid #ccc;
+}
+.choice.correct{
+  background:#8b0000;
+  color:#fff;
+}
+.choice.wrong{
+  background:#777;
+  color:#fff;
+}
+
+/* ⭐ ランク表示（ここが進化ポイント） */
 .result-box{
   padding:20px;
   margin-top:10px;
@@ -82,6 +117,7 @@ button:hover{
   background:#111;
   color:#fff;
   border-radius:10px;
+  animation:fadeIn 0.5s ease;
 }
 
 .rank{
@@ -89,6 +125,14 @@ button:hover{
   font-weight:bold;
   color:#ff4444;
   margin-top:10px;
+  letter-spacing:2px;
+  text-shadow:0 0 10px rgba(255,0,0,0.7);
+}
+
+/* アニメーション */
+@keyframes fadeIn{
+  from{opacity:0; transform:scale(0.9);}
+  to{opacity:1; transform:scale(1);}
 }
 </style>
 </head>
@@ -101,95 +145,144 @@ button:hover{
   <div id="gauge" class="gauge"></div>
 </div>
 
-<div id="quiz"></div>
+<div id="quiz" class="card"></div>
 
 <script>
-let questions = [
-  {q:"1+1は？",choices:["1","2","3"],answer:"2",explanation:"基本！"},
-  {q:"3+3は？",choices:["5","6","7"],answer:"6",explanation:"簡単！"},
-  {q:"5+5は？",choices:["10","11","12"],answer:"10",explanation:"OK！"}
-];
+const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&single=true&output=csv";
 
+let questions = [];
 let current = 0;
 let score = 0;
 
-/* 正規化 */
-function normalize(str){
-  return (str || "")
-    .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0)-65248))
-    .replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0)-65248))
-    .toLowerCase()
-    .trim();
+/* CSV */
+function parseCSV(text){
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for(let i=0;i<text.length;i++){
+    const char = text[i];
+
+    if(char === '"'){
+      inQuotes = !inQuotes;
+    }else if(char === ',' && !inQuotes){
+      row.push(cell);
+      cell = "";
+    }else if(char === '\n' && !inQuotes){
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    }else{
+      cell += char;
+    }
+  }
+  row.push(cell);
+  rows.push(row);
+  return rows;
 }
 
-/* ゲージ */
+/* 正規化（最重要） */
+function normalize(str){
+  return (str || "")
+    .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 65248))
+    .trim()
+    .toUpperCase();
+}
+
+fetch(url)
+.then(res=>res.text())
+.then(data=>{
+  const rows = parseCSV(data).slice(1);
+
+  questions = rows
+    .map(c => c.map(v => (v || "").trim()))
+    .filter(c => c[0] && c[4])
+    .map(c=>{
+      return {
+        q:c[0],
+        choices:[c[1],c[2],c[3]],
+        answer: normalize(c[4]),
+        explanation:c[5]
+      };
+    });
+
+  questions = questions.sort(()=>0.5-Math.random()).slice(0,10);
+
+  showQuestion();
+});
+
 function updateGauge(){
   const percent = (current / questions.length) * 100;
   document.getElementById("gauge").style.width = percent + "%";
 }
 
-/* 問題表示 */
 function showQuestion(){
   updateGauge();
+
   const q = questions[current];
+  let html = `<h2>第${current+1}問：${q.q}</h2>`;
 
-  let html = `<div class="card">
-    <h2>${q.q}</h2>`;
-
-  q.choices.forEach(c=>{
-    html += `<button onclick="answer('${c}')">${c}</button>`;
+  ["A","B","C"].forEach((l,i)=>{
+    html += `<button onclick="answer('${l}')">${q.choices[i]}</button>`;
   });
 
-  html += `</div>`;
   document.getElementById("quiz").innerHTML = html;
 }
 
-/* 回答 */
 function answer(a){
   const q = questions[current];
   const user = normalize(a);
-  const correct = normalize(q.answer);
 
-  let html = `<div class="card">`;
+  let html = "";
 
-  if(user === correct){
+  if(user === q.answer){
     score++;
-    html += `<div class="big-circle"></div><h2>正解！</h2>`;
+    html += "<div class='big-circle'></div><h2>正解！</h2>";
   }else{
-    html += `<div class="big-x">×</div><h2>不正解</h2>`;
+    html += "<div class='big-x'>×</div><h2>不正解</h2>";
   }
 
-  html += `<p>${q.explanation}</p>
-           <button onclick="next()">次へ</button>
-           </div>`;
+  html += `<p>あなた：${user} ／ 正解：${q.answer}</p>`;
+
+  ["A","B","C"].forEach((l,i)=>{
+    let cls = "choice";
+    if(l === q.answer) cls += " correct";
+    else if(l === user) cls += " wrong";
+
+    html += `<div class="${cls}">${l}: ${q.choices[i]}</div>`;
+  });
+
+  html += `<p>${q.explanation}</p>`;
+  html += "<button onclick='next()'>次へ</button>";
 
   document.getElementById("quiz").innerHTML = html;
 }
 
-/* 次へ */
 function next(){
   current++;
 
   if(current < questions.length){
     showQuestion();
   }else{
+    document.getElementById("gauge").style.width = "100%";
+
     let rank = "";
-    if(score === questions.length) rank = "神";
-    else if(score >= 7) rank = "名探偵";
-    else if(score >= 4) rank = "見習い";
-    else rank = "気にしないで";
+    if(score === 10) rank = "名探偵";
+    else if(score >= 8) rank = "まあ探偵";
+    else if(score >= 5) rank = "眠りの小五郎";
+    else if(score >= 3) rank = "・・・・";
+    else rank = "気にしないで。";
 
     document.getElementById("quiz").innerHTML =
       `<div class="result-box">
         <h2>捜査完了</h2>
-        <p>${score} / ${questions.length}</p>
+        <p>${score} / 10</p>
         <div class="rank">${rank}</div>
       </div>`;
   }
 }
-
-/* 初期表示 */
-showQuestion();
 </script>
 
 </body>
