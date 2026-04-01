@@ -1,34 +1,25 @@
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>五味おんせん推理録</title>
-
-<!-- ★ モバイル最適化 -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>ごみおんせん推理録</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 body{
-@@ -19,52 +23,53 @@
-
+  background:#1a1a1a;
   color:#fff;
   text-align:center;
-  padding:20px;
   padding:15px;
   margin:0;
 }
 
-/* タイトル */
 h1{
-  font-size:30px;
-  letter-spacing:3px;
   font-size:24px;
   letter-spacing:2px;
 }
 
-/* グレーゲージ */
-/* ゲージ */
 .gauge-wrap{
   width:100%;
   max-width:420px;
@@ -36,76 +27,54 @@ h1{
   background:#555;
   border-radius:10px;
   overflow:hidden;
-  height:12px;
   height:10px;
 }
 .gauge{
   height:100%;
   width:0%;
-  background:#aaa; /* ← グレー */
   background:#aaa;
   transition:0.4s;
 }
 
-/* カード */
 .card{
   background:#f4f1ea;
   color:#111;
-  padding:25px;
   padding:15px;
   border-radius:5px;
-  margin:20px auto;
   margin:15px auto;
   max-width:420px;
-  border:4px solid #3b2a1a;
   border:3px solid #3b2a1a;
 }
 
-/* ボタン */
 button{
   display:block;
   width:100%;
-  margin:10px 0;
-  padding:12px;
   margin:8px 0;
   padding:14px;
   font-size:16px;
   border:none;
-  border-radius:3px;
   border-radius:5px;
   background:#2f2f2f;
   color:#fff;
 }
-@@ -73,17 +78,18 @@
+
+button:hover{
   background:#8b0000;
 }
 
-/* 正解演出 */
-/* 正解 */
 .big-circle{
-  width:120px;
-  height:120px;
   width:100px;
   height:100px;
   border-radius:50%;
-  border:10px solid #b30000;
   border:8px solid #b30000;
   margin:10px auto;
 }
 
-/* 不正解 */
 .big-x{
-  font-size:80px;
   font-size:70px;
   color:#555;
 }
 
-@@ -102,12 +108,38 @@
-  background:#777;
-  color:#fff;
-}
-
-/* ⭐ ランク表示（ここが進化ポイント） */
 .result-box{
   padding:20px;
   margin-top:10px;
@@ -113,7 +82,6 @@ button{
   background:#111;
   color:#fff;
   border-radius:10px;
-  animation:fadeIn 0.5s ease;
 }
 
 .rank{
@@ -121,62 +89,38 @@ button{
   font-weight:bold;
   color:#ff4444;
   margin-top:10px;
-  letter-spacing:2px;
-  text-shadow:0 0 10px rgba(255,0,0,0.7);
-}
-
-/* アニメーション */
-@keyframes fadeIn{
-  from{opacity:0; transform:scale(0.9);}
-  to{opacity:1; transform:scale(1);}
 }
 </style>
 </head>
 
 <body>
 
-<h1>五味おんせん推理録</h1>
 <h1>ごみおんせん推理録</h1>
 
 <div class="gauge-wrap">
   <div id="gauge" class="gauge"></div>
-@@ -122,7 +154,7 @@ <h1>五味おんせん推理録</h1>
+</div>
+
+<div id="quiz"></div>
+
+<script>
+let questions = [
+  {q:"1+1は？",choices:["1","2","3"],answer:"2",explanation:"基本！"},
+  {q:"3+3は？",choices:["5","6","7"],answer:"6",explanation:"簡単！"},
+  {q:"5+5は？",choices:["10","11","12"],answer:"10",explanation:"OK！"}
+];
+
 let current = 0;
 let score = 0;
 
-/* CSVパース */
-/* CSV */
-function parseCSV(text){
-  const rows = [];
-  let row = [];
-@@ -148,11 +180,10 @@ <h1>五味おんせん推理録</h1>
-  }
-  row.push(cell);
-  rows.push(row);
-
-  return rows;
-}
-
-/* 全角→半角変換 */
-/* 正規化（最重要） */
+/* 正規化 */
 function normalize(str){
   return (str || "")
-    .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 65248))
-@@ -172,23 +203,21 @@ <h1>五味おんせん推理録</h1>
-      return {
-        q:c[0],
-        choices:[c[1],c[2],c[3]],
-        answer: normalize(c[4]), // ← 完全対策
-        answer: normalize(c[4]),
-        explanation:c[5]
-      };
-    });
-
-  questions = questions.sort(()=>0.5-Math.random()).slice(0,10); // ← 10問
-  questions = questions.sort(()=>0.5-Math.random()).slice(0,10);
-
-  showQuestion();
-});
+    .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0)-65248))
+    .replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0)-65248))
+    .toLowerCase()
+    .trim();
+}
 
 /* ゲージ */
 function updateGauge(){
@@ -184,11 +128,19 @@ function updateGauge(){
   document.getElementById("gauge").style.width = percent + "%";
 }
 
-/* 問題 */
+/* 問題表示 */
 function showQuestion(){
   updateGauge();
+  const q = questions[current];
 
-@@ -202,7 +231,6 @@ <h1>五味おんせん推理録</h1>
+  let html = `<div class="card">
+    <h2>${q.q}</h2>`;
+
+  q.choices.forEach(c=>{
+    html += `<button onclick="answer('${c}')">${c}</button>`;
+  });
+
+  html += `</div>`;
   document.getElementById("quiz").innerHTML = html;
 }
 
@@ -196,7 +148,21 @@ function showQuestion(){
 function answer(a){
   const q = questions[current];
   const user = normalize(a);
-@@ -232,7 +260,6 @@ <h1>五味おんせん推理録</h1>
+  const correct = normalize(q.answer);
+
+  let html = `<div class="card">`;
+
+  if(user === correct){
+    score++;
+    html += `<div class="big-circle"></div><h2>正解！</h2>`;
+  }else{
+    html += `<div class="big-x">×</div><h2>不正解</h2>`;
+  }
+
+  html += `<p>${q.explanation}</p>
+           <button onclick="next()">次へ</button>
+           </div>`;
+
   document.getElementById("quiz").innerHTML = html;
 }
 
@@ -204,18 +170,27 @@ function answer(a){
 function next(){
   current++;
 
-@@ -249,9 +276,11 @@ <h1>五味おんせん推理録</h1>
-    else rank = "気にしないで。";
+  if(current < questions.length){
+    showQuestion();
+  }else{
+    let rank = "";
+    if(score === questions.length) rank = "神";
+    else if(score >= 7) rank = "名探偵";
+    else if(score >= 4) rank = "見習い";
+    else rank = "気にしないで";
 
     document.getElementById("quiz").innerHTML =
-      `<h2>結果</h2>
-       <p>${score} / 10</p>
-       <p>${rank}</p>`;
       `<div class="result-box">
         <h2>捜査完了</h2>
-        <p>${score} / 10</p>
+        <p>${score} / ${questions.length}</p>
         <div class="rank">${rank}</div>
       </div>`;
   }
 }
+
+/* 初期表示 */
+showQuestion();
 </script>
+
+</body>
+</html>
