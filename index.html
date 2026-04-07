@@ -73,11 +73,50 @@ button{
 
 .timer{ color:red; font-size:22px; }
 </style>
+/* 🚨 画面赤点滅 */
+body.alert{
+  animation: flashBg 0.5s infinite;
+}
+
+@keyframes flashBg{
+  0%{ background:#200; }
+  50%{ background:#800; }
+  100%{ background:#200; }
+}
+
+/* WARNING表示 */
+.warning{
+  font-size:28px;
+  color:red;
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink{
+  0%{opacity:1;}
+  50%{opacity:0;}
+  100%{opacity:1;}
+}
+
+/* 手紙 */
+.letter{
+  width:280px;
+  margin:30px auto;
+  padding:20px;
+  background:#fdf5e6;
+  color:#111;
+  border:2px solid #8b0000;
+  transform:scale(0);
+  animation: openLetter 0.8s forwards;
+}
+
+@keyframes openLetter{
+  to{ transform:scale(1); }
+}
 </head>
 
 <body>
 
-<h1>ごみおんせん推理録！</h1>
+<h1>ごみおんせん推理録</h1>
 
 <div class="gauge-wrap">
   <div id="gauge" class="gauge"></div>
@@ -199,12 +238,12 @@ function next(){
     document.getElementById("quiz").innerHTML=
     `<div class="result-box">
       <h2>捜査完了</h2>
-      <p>${score} / 10</p>
+      <p>${score} / ${questions.length}</p>
       <div class="rank">${rank}</div>
     </div>`;
 
     if(score===10){
-      setTimeout(startEmergency,2000);
+      setTimeout(startWarning,1000);
     }
   }
 }
@@ -321,6 +360,31 @@ function showFail(){
     <h2>時間切れ…</h2>
     <button onclick='location.reload()'>再挑戦</button>
   </div>`;
+}
+  function startWarning(){
+  document.body.classList.add("alert");
+
+  document.getElementById("quiz").innerHTML = `
+    <div class="warning">⚠ WARNING ⚠</div>
+    <p>不審な通信を検知…</p>
+  `;
+
+  setTimeout(showLetter,2500);
+}
+
+  function showLetter(){
+  document.body.classList.remove("alert");
+
+  document.getElementById("quiz").innerHTML = `
+    <div class="letter">
+      <h3>📜 招待状</h3>
+      <p>名探偵へ——</p>
+      <p>その実力、試させてもらう。</p>
+      <p>覚悟があるなら開封せよ。</p>
+      <p style="text-align:right;">五味勘三郎</p>
+      <button onclick="launchExtra()">開封する</button>
+    </div>
+  `;
 }
 </script>
 
