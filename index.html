@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 
-<!-- ★ モバイル最適化 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>ごみおんせん推理録</title>
@@ -27,13 +26,8 @@ body{
   margin:0;
 }
 
-/* タイトル */
-h1{
-  font-size:24px;
-  letter-spacing:2px;
-}
+h1{ font-size:24px; }
 
-/* ゲージ */
 .gauge-wrap{
   width:100%;
   max-width:420px;
@@ -50,7 +44,6 @@ h1{
   transition:0.4s;
 }
 
-/* カード */
 .card{
   background:#f4f1ea;
   color:#111;
@@ -61,7 +54,6 @@ h1{
   border:3px solid #3b2a1a;
 }
 
-/* ボタン */
 button{
   display:block;
   width:100%;
@@ -73,66 +65,34 @@ button{
   background:#2f2f2f;
   color:#fff;
 }
+button:hover{ background:#8b0000; }
 
-button:hover{
-  background:#8b0000;
-}
-
-/* 正解 */
-.big-circle{
-  width:100px;
-  height:100px;
-  border-radius:50%;
-  border:8px solid #b30000;
-  margin:10px auto;
-}
-
-/* 不正解 */
-.big-x{
-  font-size:70px;
-  color:#555;
-}
-
-/* 選択肢 */
 .choice{
   padding:10px;
   margin:5px;
   border-radius:5px;
   border:1px solid #ccc;
 }
-.choice.correct{
-  background:#8b0000;
-  color:#fff;
-}
-.choice.wrong{
-  background:#777;
-  color:#fff;
-}
+.choice.correct{ background:#8b0000; color:#fff; }
+.choice.wrong{ background:#777; color:#fff; }
 
-/* ⭐ ランク表示（ここが進化ポイント） */
 .result-box{
   padding:20px;
   margin-top:10px;
   border:3px solid #8b0000;
   background:#111;
-  color:#fff;
   border-radius:10px;
-  animation:fadeIn 0.5s ease;
 }
 
 .rank{
   font-size:28px;
-  font-weight:bold;
   color:#ff4444;
-  margin-top:10px;
-  letter-spacing:2px;
-  text-shadow:0 0 10px rgba(255,0,0,0.7);
 }
 
-/* アニメーション */
-@keyframes fadeIn{
-  from{opacity:0; transform:scale(0.9);}
-  to{opacity:1; transform:scale(1);}
+.timer{
+  font-size:24px;
+  color:red;
+  font-weight:bold;
 }
 </style>
 </head>
@@ -149,16 +109,18 @@ button:hover{
 
 <script>
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&single=true&output=csv";
-/* ★ エクストラクイズ（2タブ目） */
-const extraUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=XXXXXXXX&single=true&output=csv";
+
+/* ★ここ変更 */
+const extraUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=1390184656&single=true&output=csv";
 
 let questions = [];
-let extraQuestions = [];
 let current = 0;
 let score = 0;
+
+let extraCurrent;
 let timer;
 let timeLeft = 30;
-  
+
 /* CSV */
 function parseCSV(text){
   const rows = [];
@@ -172,13 +134,10 @@ function parseCSV(text){
     if(char === '"'){
       inQuotes = !inQuotes;
     }else if(char === ',' && !inQuotes){
-      row.push(cell);
-      cell = "";
+      row.push(cell); cell="";
     }else if(char === '\n' && !inQuotes){
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
+      row.push(cell); rows.push(row);
+      row=[]; cell="";
     }else{
       cell += char;
     }
@@ -191,12 +150,12 @@ function parseCSV(text){
 /* 正規化 */
 function normalize(str){
   return (str || "")
-    .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 65248))
+    .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0)-65248))
     .trim()
     .toUpperCase();
 }
 
-/* 通常問題 */
+/* 問題取得 */
 fetch(url)
 .then(res=>res.text())
 .then(data=>{
@@ -205,52 +164,28 @@ fetch(url)
   questions = rows
     .map(c => c.map(v => (v || "").trim()))
     .filter(c => c[0] && c[4])
-    .map(c=>{
-      return {
-        q:c[0],
-        choices:[c[1],c[2],c[3]],
-        answer: normalize(c[4]),
-        explanation:c[5]
-      };
-    });
+    .map(c=>({
+      q:c[0],
+      choices:[c[1],c[2],c[3]],
+      answer: normalize(c[4]),
+      explanation:c[5]
+    }));
 
   questions = questions.sort(()=>0.5-Math.random()).slice(0,10);
   showQuestion();
 });
 
-/* エクストラ問題取得 */
-function loadExtra(){
-  return fetch(extraUrl)
-  .then(res=>res.text())
-  .then(data=>{
-    const rows = parseCSV(data).slice(1);
-
-    extraQuestions = rows
-      .map(c => c.map(v => (v || "").trim()))
-      .filter(c => c[0] && c[4])
-      .map(c=>{
-        return {
-          q:c[0],
-          choices:[c[1],c[2],c[3]],
-          answer: normalize(c[4]),
-          explanation:c[5]
-        };
-      });
-
-    return extraQuestions[Math.floor(Math.random()*extraQuestions.length)];
-  });
-}
-
+/* ゲージ */
 function updateGauge(){
-  const percent = (current / questions.length) * 100;
-  document.getElementById("gauge").style.width = percent + "%";
+  document.getElementById("gauge").style.width =
+    (current / questions.length) * 100 + "%";
 }
 
-/* 通常表示 */
+/* 表示 */
 function showQuestion(){
   updateGauge();
-
   const q = questions[current];
+
   let html = `<h2>第${current+1}問：${q.q}</h2>`;
 
   ["A","B","C"].forEach((l,i)=>{
@@ -260,24 +195,74 @@ function showQuestion(){
   document.getElementById("quiz").innerHTML = html;
 }
 
+/* 回答 */
+function answer(a){
+  const q = questions[current];
+  const user = normalize(a);
+
+  let html = "";
+
+  if(user === q.answer){
+    score++;
+    html += "<h2>正解！</h2>";
+  }else{
+    html += "<h2>不正解</h2>";
+  }
+
+  html += `<p>あなた：${user} ／ 正解：${q.answer}</p>`;
+
+  ["A","B","C"].forEach((l,i)=>{
+    let cls = "choice";
+    if(l === q.answer) cls += " correct";
+    else if(l === user) cls += " wrong";
+    html += `<div class="${cls}">${l}: ${q.choices[i]}</div>`;
+  });
+
+  html += `<p>${q.explanation}</p>`;
+  html += "<button onclick='next()'>次へ</button>";
+
+  document.getElementById("quiz").innerHTML = html;
+}
+
+/* エクストラ取得 */
+function loadExtra(){
+  return fetch(extraUrl)
+  .then(res=>res.text())
+  .then(data=>{
+    const rows = parseCSV(data).slice(1);
+
+    const extra = rows
+      .map(c => c.map(v => (v || "").trim()))
+      .filter(c => c[0] && c[4])
+      .map(c=>({
+        q:c[0],
+        choices:[c[1],c[2],c[3]],
+        answer: normalize(c[4]),
+        explanation:c[5]
+      }));
+
+    return extra[Math.floor(Math.random()*extra.length)];
+  });
+}
+
 /* 緊急ミッション */
-function startExtraMission(q){
-  isExtra = true;
+function startExtra(q){
+  extraCurrent = q;
   timeLeft = 30;
 
-  function countdown(){
+  timer = setInterval(()=>{
+    timeLeft--;
+    document.getElementById("timer").innerText = timeLeft;
+
     if(timeLeft <= 0){
       clearInterval(timer);
-      failExtra("時間切れ…");
-      return;
+      showFail("時間切れ…");
     }
-    document.getElementById("timer").innerText = timeLeft;
-    timeLeft--;
-  }
+  },1000);
 
   let html = `
     <h2 style="color:red;">🚨 緊急ミッション 🚨</h2>
-    <p>残り時間：<span id="timer">30</span>秒</p>
+    <div class="timer">残り ${timeLeft} 秒</div>
     <h3>${q.q}</h3>
   `;
 
@@ -286,20 +271,6 @@ function startExtraMission(q){
   });
 
   document.getElementById("quiz").innerHTML = html;
-
-  timer = setInterval(countdown,1000);
-}
-
-/* 通常回答 */
-function answer(a){
-  const q = questions[current];
-  const user = normalize(a);
-
-  if(user === q.answer) score++;
-
-  document.getElementById("quiz").innerHTML =
-    `<h2>${user === q.answer ? "正解！" : "不正解"}</h2>
-     <button onclick='next()'>次へ</button>`;
 }
 
 /* エクストラ回答 */
@@ -309,32 +280,29 @@ function answerExtra(a){
   const q = extraCurrent;
   const user = normalize(a);
 
+  let html = "";
+
   if(user === q.answer){
-    successExtra();
+    html += "<h2>🎉 ミッション成功 🎉</h2>";
   }else{
-    failExtra("ミッション失敗…");
+    html += "<h2>ミッション失敗…</h2>";
   }
+
+  html += `<p>正解：${q.answer}</p>`;
+  html += `<p>${q.explanation}</p>`;
+  html += "<button onclick='location.reload()'>もう一度</button>";
+
+  document.getElementById("quiz").innerHTML = html;
 }
 
-/* 成功 */
-function successExtra(){
-  document.getElementById("quiz").innerHTML =
-    `<div class="result-box">
-      <h2>🎉 ミッション成功 🎉</h2>
-      <p>真の名探偵だ！</p>
-    </div>`;
-}
-
-/* 失敗 */
-function failExtra(msg){
+function showFail(msg){
   document.getElementById("quiz").innerHTML =
     `<div class="result-box">
       <h2>${msg}</h2>
       <p>あと一歩だった…</p>
+      <button onclick='location.reload()'>再挑戦</button>
     </div>`;
 }
-
-let extraCurrent;
 
 /* 次へ */
 function next(){
@@ -346,14 +314,10 @@ function next(){
     document.getElementById("gauge").style.width = "100%";
 
     if(score === 10){
-      loadExtra().then(q=>{
-        extraCurrent = q;
-        startExtraMission(q);
-      });
+      loadExtra().then(q => startExtra(q));
       return;
     }
 
-    /* 通常エンド */
     let rank = "";
     if(score >= 8) rank = "まあ探偵";
     else if(score >= 5) rank = "眠りの小五郎";
@@ -368,5 +332,6 @@ function next(){
   }
 }
 </script>
+
 </body>
 </html>
