@@ -228,13 +228,17 @@ function loadExtra(){
     const rows = parseCSV(data).slice(1);
 
     const extra = rows
-      .filter(c=>c[0] && c[4])
+      .filter(c=>c[0] && c[1] && c[2] && c[3] && c[4])
       .map(c=>({
         q:c[0],
         choices:[c[1],c[2],c[3]],
         answer: normalize(c[4]),
-        explanation:c[5]
+        explanation:c[5] || "解説なし"
       }));
+
+    if(extra.length === 0){
+      throw new Error("エクストラ問題が0件");
+    }
 
     return extra[Math.floor(Math.random()*extra.length)];
   });
@@ -242,7 +246,22 @@ function loadExtra(){
 
 /* 開始 */
 function launchExtra(){
-  loadExtra().then(q=>startExtra(q));
+  loadExtra()
+    .then(q=>{
+      if(!q){
+        throw new Error("問題取得失敗");
+      }
+      startExtra(q);
+    })
+    .catch(err=>{
+      console.error(err);
+      document.getElementById("quiz").innerHTML = `
+        <div class="result-box">
+          <h2>通信エラー</h2>
+          <p>緊急問題の取得に失敗しました</p>
+          <button onclick="location.reload()">再読み込み</button>
+        </div>`;
+    });
 }
 
 /* 緊急問題 */
