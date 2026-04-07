@@ -116,7 +116,7 @@ body.alert{
 
 <body>
 
-<h1>ごみおんせん推理録</h1>
+<h1>ごみおんせん推理録!</h1>
 
 <div class="gauge-wrap">
   <div id="gauge" class="gauge"></div>
@@ -236,21 +236,18 @@ function next(){
     document.getElementById("quiz").innerHTML=
     `<div class="result-box">
       <h2>捜査完了</h2>
-     <p style="
-        font-size:28px;
-        font-weight:bold;
-        color:#ffcc00;
-        margin:15px 0;
-        font-family:sans-serif;
-      ">
+
+      <!-- ★白で強調 -->
+      <p class="result-score">
         ${score} / ${questions.length} 問正解！
       </p>
+
       <div class="rank">${rank}</div>
     </div>`;
 
-    /* ★ここが重要：満点時のみ演出 */
+    /* 満点時だけ演出 */
     if(score===10){
-      setTimeout(startWarning,1500);
+      setTimeout(startWarning,4000);
     }
   }
 }
@@ -340,22 +337,51 @@ function startExtra(q){
 function answerExtra(a){
   clearInterval(timer);
 
-  const q=extraCurrent;
-  const user=normalize(a);
+  const q = extraCurrent;
+  const user = normalize(a);
 
-  let html="";
+  let html = "";
 
-  if(user===q.answer){
-    html+="<h2>🎉 ミッション成功 🎉</h2>";
+  if(user === q.answer){
+
+    // 成功演出
+    document.body.style.background = "radial-gradient(#003,#000)";
+
+    html = `
+      <div class="result-box">
+        <h2 style="color:#00ffcc;">✔ ミッション成功</h2>
+        <p style="font-size:22px;">完全勝利だ…</p>
+
+        <div class="explanation-box">
+          ${q.explanation}
+        </div>
+
+        <button onclick='location.reload()'>もう一度</button>
+      </div>
+    `;
+
   }else{
-    html+="<h2>ミッション失敗…</h2>";
+
+    // 失敗演出
+    document.body.style.background = "#000";
+
+    html = `
+      <div class="result-box">
+        <h2 style="color:red;">✖ ミッション失敗</h2>
+        <p style="font-size:20px;">五味勘三郎「まだ甘いな…」</p>
+
+        <p>正解：${q.answer}</p>
+
+        <div class="explanation-box">
+          ${q.explanation}
+        </div>
+
+        <button onclick='location.reload()'>再挑戦</button>
+      </div>
+    `;
   }
 
-  html+=`<p>正解：${q.answer}</p>`;
-  html+=`<div class="explanation-box">${q.explanation}</div>`;
-  html+="<button onclick='location.reload()'>もう一度</button>";
-
-  document.getElementById("quiz").innerHTML=html;
+  document.getElementById("quiz").innerHTML = html;
 }
 
 /* 失敗 */
