@@ -149,11 +149,16 @@ button:hover{
 
 <script>
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&single=true&output=csv";
+/* ★ エクストラクイズ（2タブ目） */
+const extraUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=XXXXXXXX&single=true&output=csv";
 
 let questions = [];
+let extraQuestions = [];
 let current = 0;
 let score = 0;
-
+let timer;
+let timeLeft = 30;
+  
 /* CSV */
 function parseCSV(text){
   const rows = [];
@@ -183,7 +188,7 @@ function parseCSV(text){
   return rows;
 }
 
-/* 正規化（最重要） */
+/* 正規化 */
 function normalize(str){
   return (str || "")
     .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0) - 65248))
@@ -191,6 +196,7 @@ function normalize(str){
     .toUpperCase();
 }
 
+/* 通常問題 */
 fetch(url)
 .then(res=>res.text())
 .then(data=>{
@@ -209,15 +215,38 @@ fetch(url)
     });
 
   questions = questions.sort(()=>0.5-Math.random()).slice(0,10);
-
   showQuestion();
 });
+
+/* エクストラ問題取得 */
+function loadExtra(){
+  return fetch(extraUrl)
+  .then(res=>res.text())
+  .then(data=>{
+    const rows = parseCSV(data).slice(1);
+
+    extraQuestions = rows
+      .map(c => c.map(v => (v || "").trim()))
+      .filter(c => c[0] && c[4])
+      .map(c=>{
+        return {
+          q:c[0],
+          choices:[c[1],c[2],c[3]],
+          answer: normalize(c[4]),
+          explanation:c[5]
+        };
+      });
+
+    return extraQuestions[Math.floor(Math.random()*extraQuestions.length)];
+  });
+}
 
 function updateGauge(){
   const percent = (current / questions.length) * 100;
   document.getElementById("gauge").style.width = percent + "%";
 }
 
+/* 通常表示 */
 function showQuestion(){
   updateGauge();
 
@@ -231,35 +260,83 @@ function showQuestion(){
   document.getElementById("quiz").innerHTML = html;
 }
 
+/* 緊急ミッション */
+function startExtraMission(q){
+  isExtra = true;
+  timeLeft = 30;
+
+  function countdown(){
+    if(timeLeft <= 0){
+      clearInterval(timer);
+      failExtra("時間切れ…");
+      return;
+    }
+    document.getElementById("timer").innerText = timeLeft;
+    timeLeft--;
+  }
+
+  let html = `
+    <h2 style="color:red;">🚨 緊急ミッション 🚨</h2>
+    <p>残り時間：<span id="timer">30</span>秒</p>
+    <h3>${q.q}</h3>
+  `;
+
+  ["A","B","C"].forEach((l,i)=>{
+    html += `<button onclick="answerExtra('${l}')">${q.choices[i]}</button>`;
+  });
+
+  document.getElementById("quiz").innerHTML = html;
+
+  timer = setInterval(countdown,1000);
+}
+
+/* 通常回答 */
 function answer(a){
   const q = questions[current];
   const user = normalize(a);
 
-  let html = "";
+  if(user === q.answer) score++;
 
-  if(user === q.answer){
-    score++;
-    html += "<div class='big-circle'></div><h2>正解！</h2>";
-  }else{
-    html += "<div class='big-x'>×</div><h2>不正解</h2>";
-  }
-
-  html += `<p>あなた：${user} ／ 正解：${q.answer}</p>`;
-
-  ["A","B","C"].forEach((l,i)=>{
-    let cls = "choice";
-    if(l === q.answer) cls += " correct";
-    else if(l === user) cls += " wrong";
-
-    html += `<div class="${cls}">${l}: ${q.choices[i]}</div>`;
-  });
-
-  html += `<p>${q.explanation}</p>`;
-  html += "<button onclick='next()'>次へ</button>";
-
-  document.getElementById("quiz").innerHTML = html;
+  document.getElementById("quiz").innerHTML =
+    `<h2>${user === q.answer ? "正解！" : "不正解"}</h2>
+     <button onclick='next()'>次へ</button>`;
 }
 
+/* エクストラ回答 */
+function answerExtra(a){
+  clearInterval(timer);
+
+  const q = extraCurrent;
+  const user = normalize(a);
+
+  if(user === q.answer){
+    successExtra();
+  }else{
+    failExtra("ミッション失敗…");
+  }
+}
+
+/* 成功 */
+function successExtra(){
+  document.getElementById("quiz").innerHTML =
+    `<div class="result-box">
+      <h2>🎉 ミッション成功 🎉</h2>
+      <p>真の名探偵だ！</p>
+    </div>`;
+}
+
+/* 失敗 */
+function failExtra(msg){
+  document.getElementById("quiz").innerHTML =
+    `<div class="result-box">
+      <h2>${msg}</h2>
+      <p>あと一歩だった…</p>
+    </div>`;
+}
+
+let extraCurrent;
+
+/* 次へ */
 function next(){
   current++;
 
@@ -268,12 +345,19 @@ function next(){
   }else{
     document.getElementById("gauge").style.width = "100%";
 
+    if(score === 10){
+      loadExtra().then(q=>{
+        extraCurrent = q;
+        startExtraMission(q);
+      });
+      return;
+    }
+
+    /* 通常エンド */
     let rank = "";
-    if(score === 10) rank = "名探偵";
-    else if(score >= 8) rank = "まあ探偵";
+    if(score >= 8) rank = "まあ探偵";
     else if(score >= 5) rank = "眠りの小五郎";
-    else if(score >= 3) rank = "・・・・";
-    else rank = "気にしないで。";
+    else rank = "修行不足";
 
     document.getElementById("quiz").innerHTML =
       `<div class="result-box">
@@ -284,6 +368,5 @@ function next(){
   }
 }
 </script>
-
 </body>
 </html>
