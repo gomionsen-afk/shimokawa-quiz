@@ -236,7 +236,15 @@ function next(){
     document.getElementById("quiz").innerHTML=
     `<div class="result-box">
       <h2>捜査完了</h2>
-      <p>${score} / ${questions.length}</p>
+     <p style="
+        font-size:28px;
+        font-weight:bold;
+        color:#ffcc00;
+        margin:15px 0;
+        font-family:sans-serif;
+      ">
+        ${score} / ${questions.length} 問正解！
+      </p>
       <div class="rank">${rank}</div>
     </div>`;
 
