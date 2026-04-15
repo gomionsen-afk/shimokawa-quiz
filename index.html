@@ -30,8 +30,9 @@ body{
 
 #rankName{
   font-size:14px;
-  color:#ff4444;
   font-weight:bold;
+  letter-spacing:1px;
+  text-shadow:0 0 5px rgba(255,255,255,0.7);
 }
 
 .rank-bar-wrap{
@@ -45,7 +46,6 @@ body{
   height:100%;
   width:0%;
   background:#aaa;
-  transition:0.3s;
 }
 
 #rankText{
@@ -84,12 +84,10 @@ button{
   border:none;
 }
 
-/* 選択肢 */
 .choice{ padding:10px; margin:5px; }
 .correct{ background:#8b0000; color:#fff; }
 .wrong{ background:#777; color:#fff; }
 
-/* 解説 */
 .explanation-box{
   margin-top:15px;
   padding:12px;
@@ -99,7 +97,6 @@ button{
   text-align:left;
 }
 
-/* 結果 */
 .result-box{
   padding:20px;
   border:3px solid #8b0000;
@@ -132,7 +129,6 @@ body.alert{
   100%{opacity:1;}
 }
 
-/* 手紙 */
 .letter{
   width:280px;
   margin:30px auto;
@@ -148,7 +144,6 @@ body.alert{
 
 <h1>ごみおんせん推理録!!</h1>
 
-<!-- ランク -->
 <div id="rankUI">
   <div id="rankName">RANK 1</div>
   <div class="rank-bar-wrap">
@@ -167,20 +162,37 @@ body.alert{
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&single=true&output=csv";
 const extraUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=1390184656&single=true&output=csv";
 
-/* ===== ランク（可変EXP） ===== */
+/* ===== ランク ===== */
 let totalCorrect = Number(localStorage.getItem("totalCorrect") || 0);
 let playerRank = Number(localStorage.getItem("playerRank") || 1);
 let currentExp = Number(localStorage.getItem("currentExp") || 0);
 
 function getRequiredExp(rank){
-  return 9 + rank; // 徐々に増加
+  return 9 + rank;
+}
+
+/* ★ランク色 */
+function getRankColor(rank){
+  if(rank<=5) return "#ffffff";
+  if(rank<=15) return "#00ff88";
+  if(rank<=30) return "#00ccff";
+  if(rank<=50) return "#cc66ff";
+  if(rank<=100) return "#ffff44";
+  if(rank<=150) return "#ff8800";
+  if(rank<=200) return "#ff4444";
+  return "#ffd700";
 }
 
 function updateRankUI(){
   const required = getRequiredExp(playerRank);
 
-  document.getElementById("rankName").innerText = "RANK " + playerRank;
-  document.getElementById("rankText").innerText = currentExp + " / " + required;
+  const nameEl = document.getElementById("rankName");
+  nameEl.innerText = "RANK " + playerRank;
+  nameEl.style.color = getRankColor(playerRank); // ←ここが追加！
+
+  document.getElementById("rankText").innerText =
+    currentExp + " / " + required;
+
   document.getElementById("rankBar").style.width =
     (currentExp / required) * 100 + "%";
 }
@@ -260,7 +272,6 @@ function showQuestion(){
   document.getElementById("quiz").innerHTML = html;
 }
 
-/* 回答 */
 function answer(a){
   const q = questions[current];
   const user = normalize(a);
@@ -289,7 +300,6 @@ function answer(a){
   document.getElementById("quiz").innerHTML = html;
 }
 
-/* 次へ */
 function next(){
   current++;
 
@@ -324,16 +334,13 @@ let timeLeft = 30;
 
 function startWarning(){
   document.body.classList.add("alert");
-
   document.getElementById("quiz").innerHTML =
     `<div class="warning">⚠ WARNING ⚠</div>`;
-
   setTimeout(showLetter,2500);
 }
 
 function showLetter(){
   document.body.classList.remove("alert");
-
   document.getElementById("quiz").innerHTML =
     `<div class="letter">
       <h3>📜 招待状</h3>
@@ -352,7 +359,6 @@ function loadExtra(){
       answer: normalize(c[4]),
       explanation:c[5]
     }));
-
     return extra[Math.floor(Math.random()*extra.length)];
   });
 }
@@ -369,7 +375,6 @@ function startExtra(q){
   timer=setInterval(()=>{
     timeLeft--;
     document.getElementById("timer").innerText=timeLeft;
-
     if(timeLeft<=0){
       clearInterval(timer);
       showFail();
@@ -391,7 +396,6 @@ function startExtra(q){
 
 function answerExtra(a){
   clearInterval(timer);
-
   const q = extraCurrent;
   const user = normalize(a);
 
