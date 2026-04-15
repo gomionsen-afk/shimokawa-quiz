@@ -404,4 +404,73 @@ function showFail(){
 </script>
 
 </body>
+  <div id="rankUI">
+  <div id="rankName">RANK 1</div>
+  <div class="rank-bar-wrap">
+    <div id="rankBar" class="rank-bar"></div>
+  </div>
+  <div id="rankText">0 / 10</div>
+</div>
+  /* ===== ランクUI（追加） ===== */
+#rankUI{
+  position:fixed;
+  top:10px;
+  right:10px;
+  background:#111;
+  border:2px solid #8b0000;
+  padding:10px;
+  border-radius:10px;
+  width:120px;
+  z-index:9999;
+  box-shadow:0 0 10px rgba(0,0,0,0.7);
+}
+
+#rankName{
+  font-size:14px;
+  color:#ff4444;
+  font-weight:bold;
+}
+
+.rank-bar-wrap{
+  width:100%;
+  height:8px;
+  background:#444;
+  border-radius:5px;
+  margin:5px 0;
+  overflow:hidden;
+}
+
+.rank-bar{
+  height:100%;
+  width:0%;
+  background:#aaa;
+  transition:0.3s;
+}
+
+#rankText{
+  font-size:12px;
+}
+  /* ===== ランクシステム（追加） ===== */
+let totalCorrect = Number(localStorage.getItem("totalCorrect") || 0);
+let playerRank = Math.floor(totalCorrect / 10) + 1;
+
+function updateRankUI(){
+  playerRank = Math.floor(totalCorrect / 10) + 1;
+  const progress = totalCorrect % 10;
+
+  const nameEl = document.getElementById("rankName");
+  const textEl = document.getElementById("rankText");
+  const barEl = document.getElementById("rankBar");
+
+  if(!nameEl || !textEl || !barEl) return; // ←崩れ防止
+
+  nameEl.innerText = "RANK " + playerRank;
+  textEl.innerText = progress + " / 10";
+  barEl.style.width = (progress * 10) + "%";
+}
+
+/* 初期表示 */
+setTimeout(updateRankUI, 100);
+  if(user === q.answer){
+  score++;
 </html>
