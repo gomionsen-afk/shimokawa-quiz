@@ -20,22 +20,24 @@ body{
   position:fixed;
   top:10px;
   right:10px;
-  padding:12px;
+  background:#111;
+  border:2px solid #8b0000;
+  padding:10px;
   border-radius:10px;
-  width:140px;
+  width:130px;
   z-index:9999;
-  transition:0.5s;
+  transition:0.3s;
 }
 
-/* ランク別進化 */
+/* ▼ランク進化 */
 .rank1{border:2px solid #aaa;}
 .rank2{border:2px solid #0f0;}
 .rank3{border:2px solid #00f;}
 .rank4{border:2px solid #a0f;}
-.rank5{border:2px solid gold; box-shadow:0 0 10px gold;}
-.rank6{border:2px solid orange; box-shadow:0 0 15px orange;}
-.rank7{border:2px solid red; box-shadow:0 0 20px red;}
-.rank8{border:3px double gold; box-shadow:0 0 25px gold;}
+.rank5{border:2px solid #ff0; box-shadow:0 0 8px #ff0;}
+.rank6{border:2px solid orange; box-shadow:0 0 12px orange;}
+.rank7{border:2px solid red; box-shadow:0 0 15px red;}
+.rank8{border:3px double gold; box-shadow:0 0 20px gold;}
 
 #rankName{
   font-size:14px;
@@ -45,7 +47,7 @@ body{
 .rank-bar-wrap{
   width:100%;
   height:8px;
-  background:#333;
+  background:#444;
   border-radius:5px;
 }
 
@@ -53,77 +55,105 @@ body{
   height:100%;
   width:0%;
   background:#aaa;
+  transition:0.3s;
+}
+
+#rankText{
+  font-size:12px;
 }
 
 /* ===== UI ===== */
+.gauge-wrap{
+  width:90%; max-width:420px;
+  margin:10px auto;
+  background:#555;
+  border-radius:10px;
+  height:10px;
+}
+.gauge{
+  height:100%;
+  width:0%;
+  background:#aaa;
+}
+
 .card{
-  background:#111;
-  color:#fff;
+  background:#f4f1ea;
+  color:#111;
   padding:15px;
+  border-radius:5px;
   margin:15px auto;
   max-width:420px;
 }
 
 button{
   width:100%;
-  padding:12px;
-  margin:6px 0;
-  background:#222;
+  margin:8px 0;
+  padding:14px;
+  background:#2f2f2f;
   color:#fff;
   border:none;
 }
 
-.correct{background:#8b0000;}
-.wrong{background:#555;}
+.choice{ padding:10px; margin:5px; }
+.correct{ background:#8b0000; color:#fff; }
+.wrong{ background:#777; color:#fff; }
 
 .explanation-box{
-  background:#000;
+  margin-top:15px;
+  padding:12px;
+  background:#111;
   color:#fff;
-  padding:10px;
-  margin-top:10px;
-  border-left:5px solid red;
+  border-left:5px solid #ff4444;
+  text-align:left;
 }
 
 .result-box{
-  background:#000;
   padding:20px;
-  border:2px solid red;
+  border:3px solid #8b0000;
+  background:#111;
+  color:#fff;
 }
 
-.rank{
-  font-size:26px;
-  font-weight:bold;
+.rank{ font-size:24px; color:#ff4444; }
+
+.timer{ color:red; font-size:22px; }
+
+/* WARNING */
+body.alert{
+  animation: flashBg 0.5s infinite;
+}
+@keyframes flashBg{
+  0%{ background:#200; }
+  50%{ background:#800; }
+  100%{ background:#200; }
 }
 
-/* ===== 黒の組織風 ===== */
-body.dark{
-  background:#000;
-}
-
-.glitch{
+.warning{
   font-size:28px;
   color:red;
-  animation: glitch 0.2s infinite;
+  animation: blink 0.8s infinite;
 }
-
-@keyframes glitch{
-  0%{transform:translate(1px,0);}
-  50%{transform:translate(-1px,0);}
-  100%{transform:translate(1px,0);}
+@keyframes blink{
+  0%{opacity:1;}
+  50%{opacity:0;}
+  100%{opacity:1;}
 }
 
 /* 手紙 */
 .letter{
-  background:#111;
-  border:1px solid red;
+  width:280px;
+  margin:30px auto;
   padding:20px;
+  background:#fdf5e6;
+  color:#111;
+  border:2px solid #8b0000;
 }
 </style>
 </head>
 
 <body>
 
-<h1>ごみおんせん推理録</h1>
+<h1>ごみおんせん推理録!!</h1>
 
 <div id="rankUI">
   <div id="rankName">RANK 1</div>
@@ -133,185 +163,82 @@ body.dark{
   <div id="rankText">0 / 10</div>
 </div>
 
+<div class="gauge-wrap">
+  <div id="gauge" class="gauge"></div>
+</div>
+
 <div id="quiz" class="card"></div>
 
 <script>
-const url="https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&output=csv";
-const extraUrl="https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=1390184656&output=csv";
+const url = "そのまま";
+const extraUrl = "そのまま";
 
 /* ===== ランク ===== */
-let totalCorrect=Number(localStorage.getItem("totalCorrect")||0);
-let playerRank=Number(localStorage.getItem("playerRank")||1);
-let currentExp=Number(localStorage.getItem("currentExp")||0);
+let totalCorrect = Number(localStorage.getItem("totalCorrect") || 0);
+let playerRank = Number(localStorage.getItem("playerRank") || 1);
+let currentExp = Number(localStorage.getItem("currentExp") || 0);
 
-function getRequiredExp(rank){return 9+rank;}
+function getRequiredExp(rank){
+  return 9 + rank;
+}
 
+/* ▼ランク色 */
 function getRankColor(rank){
-  if(rank<=5)return "#fff";
-  if(rank<=15)return "#0f0";
-  if(rank<=30)return "#0af";
-  if(rank<=50)return "#a0f";
-  if(rank<=100)return "#ff0";
-  if(rank<=150)return "#f80";
-  if(rank<=200)return "#f00";
+  if(rank<=5) return "#fff";
+  if(rank<=15) return "#0f0";
+  if(rank<=30) return "#00f";
+  if(rank<=50) return "#a0f";
+  if(rank<=100) return "#ff0";
+  if(rank<=150) return "orange";
+  if(rank<=200) return "red";
   return "gold";
 }
 
+/* ▼ランク枠 */
 function getRankClass(rank){
-  if(rank<6)return "rank1";
-  if(rank<16)return "rank2";
-  if(rank<31)return "rank3";
-  if(rank<51)return "rank4";
-  if(rank<101)return "rank5";
-  if(rank<151)return "rank6";
-  if(rank<201)return "rank7";
+  if(rank<=5) return "rank1";
+  if(rank<=15) return "rank2";
+  if(rank<=30) return "rank3";
+  if(rank<=50) return "rank4";
+  if(rank<=100) return "rank5";
+  if(rank<=150) return "rank6";
+  if(rank<=200) return "rank7";
   return "rank8";
 }
 
 function updateRankUI(){
-  const required=getRequiredExp(playerRank);
-  const color=getRankColor(playerRank);
+  const required = getRequiredExp(playerRank);
 
-  const ui=document.getElementById("rankUI");
-  ui.className="";
+  const ui = document.getElementById("rankUI");
+  ui.className = "";
   ui.classList.add(getRankClass(playerRank));
 
-  document.getElementById("rankName").innerText="RANK "+playerRank;
-  document.getElementById("rankName").style.color=color;
-  document.getElementById("rankText").innerText=currentExp+" / "+required;
-  document.getElementById("rankBar").style.width=(currentExp/required)*100+"%";
+  document.getElementById("rankName").innerText = "RANK " + playerRank;
+  document.getElementById("rankName").style.color = getRankColor(playerRank);
+
+  document.getElementById("rankText").innerText = currentExp + " / " + required;
+  document.getElementById("rankBar").style.width =
+    (currentExp / required) * 100 + "%";
 }
 
 function addExp(){
   currentExp++;
   totalCorrect++;
 
-  if(currentExp>=getRequiredExp(playerRank)){
-    currentExp=0;
+  if(currentExp >= getRequiredExp(playerRank)){
+    currentExp = 0;
     playerRank++;
   }
 
-  localStorage.setItem("totalCorrect",totalCorrect);
-  localStorage.setItem("playerRank",playerRank);
-  localStorage.setItem("currentExp",currentExp);
+  localStorage.setItem("totalCorrect", totalCorrect);
+  localStorage.setItem("playerRank", playerRank);
+  localStorage.setItem("currentExp", currentExp);
 
   updateRankUI();
 }
 
-/* ===== クイズ ===== */
-let questions=[],current=0,score=0;
-
-function parseCSV(t){return t.split("\n").map(r=>r.split(","));}
-function normalize(s){return (s||"").trim().toUpperCase();}
-
-fetch(url).then(r=>r.text()).then(d=>{
-  questions=parseCSV(d).slice(1)
-    .filter(c=>c[0]&&c[4])
-    .map(c=>({q:c[0],choices:[c[1],c[2],c[3]],answer:normalize(c[4]),explanation:c[5]}))
-    .sort(()=>0.5-Math.random()).slice(0,10);
-
-  updateRankUI();
-  showQuestion();
-});
-
-function showQuestion(){
-  const q=questions[current];
-  let html=`<h2>${q.q}</h2>`;
-  ["A","B","C"].forEach((l,i)=>{
-    html+=`<button onclick="answer('${l}')">${q.choices[i]}</button>`;
-  });
-  document.getElementById("quiz").innerHTML=html;
-}
-
-function answer(a){
-  const q=questions[current];
-  let html="";
-
-  if(a===q.answer){
-    score++;
-    addExp();
-    html+="<h2>⭕ 正解</h2>";
-  }else{
-    html+="<h2>❌ 不正解</h2>";
-  }
-
-  html+=`<div class="explanation-box">${q.explanation}</div>`;
-  html+=`<button onclick="next()">次へ</button>`;
-  quiz.innerHTML=html;
-}
-
-function next(){
-  current++;
-  if(current<questions.length) showQuestion();
-  else finish();
-}
-
-/* ===== 終了 ===== */
-function finish(){
-  let rankText="";
-
-  if(score===10) rankText="名探偵";
-  else if(score>=8) rankText="まあ探偵";
-  else if(score>=5) rankText="眠りの小五郎";
-  else if(score>=3) rankText="修行中";
-  else rankText="気にしないで";
-
-  quiz.innerHTML=`
-    <div class="result-box">
-      <h2>結果</h2>
-      <p>${score}/10</p>
-      <div class="rank">${rankText}</div>
-    </div>
-  `;
-
-  if(score===10){
-    setTimeout(startBlack,2000);
-  }
-}
-
-/* ===== 黒の組織 ===== */
-function startBlack(){
-  document.body.classList.add("dark");
-
-  quiz.innerHTML=`
-    <div class="glitch">・・・見えているぞ</div>
-  `;
-
-  setTimeout(showLetter,3000);
-}
-
-function showLetter(){
-  quiz.innerHTML=`
-    <div class="letter">
-      <h3>招待状</h3>
-      <button onclick="launchExtra()">開封</button>
-    </div>
-  `;
-}
-
-/* ===== エクストラ ===== */
-function launchExtra(){
-  fetch(extraUrl).then(r=>r.text()).then(d=>{
-    const rows=parseCSV(d).slice(1);
-    const e=rows[Math.floor(Math.random()*rows.length)];
-
-    quiz.innerHTML=`
-      <h2>最終問題</h2>
-      <p>${e[0]}</p>
-      <button onclick="checkExtra('A','${e[4]}')">${e[1]}</button>
-      <button onclick="checkExtra('B','${e[4]}')">${e[2]}</button>
-      <button onclick="checkExtra('C','${e[4]}')">${e[3]}</button>
-    `;
-  });
-}
-
-function checkExtra(a,ans){
-  if(a===ans){
-    quiz.innerHTML="<h2>完全勝利</h2>";
-  }else{
-    quiz.innerHTML="<h2>失敗…</h2>";
-  }
-}
+/* ===== 以下クイズ部分（そのまま） ===== */
+/* ※ここから下はあなたのコードそのままでOK */
 </script>
 
 </body>
