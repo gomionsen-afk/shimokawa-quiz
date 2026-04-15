@@ -24,7 +24,7 @@ body{
   border:2px solid #8b0000;
   padding:10px;
   border-radius:10px;
-  width:120px;
+  width:130px;
   z-index:9999;
 }
 
@@ -45,6 +45,7 @@ body{
   height:100%;
   width:0%;
   background:#aaa;
+  transition:0.3s;
 }
 
 #rankText{
@@ -88,7 +89,7 @@ button{
 .correct{ background:#8b0000; color:#fff; }
 .wrong{ background:#777; color:#fff; }
 
-/* 解説（白文字） */
+/* 解説 */
 .explanation-box{
   margin-top:15px;
   padding:12px;
@@ -96,10 +97,9 @@ button{
   color:#fff;
   border-left:5px solid #ff4444;
   text-align:left;
-  line-height:1.6;
 }
 
-/* 結果（白文字） */
+/* 結果 */
 .result-box{
   padding:20px;
   border:3px solid #8b0000;
@@ -167,16 +167,43 @@ body.alert{
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&single=true&output=csv";
 const extraUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=1390184656&single=true&output=csv";
 
-/* ===== ランク ===== */
+/* ===== ランク（可変EXP） ===== */
 let totalCorrect = Number(localStorage.getItem("totalCorrect") || 0);
+let playerRank = Number(localStorage.getItem("playerRank") || 1);
+let currentExp = Number(localStorage.getItem("currentExp") || 0);
+
+function getRequiredExp(rank){
+  return 9 + rank; // 徐々に増加
+}
 
 function updateRankUI(){
-  let rank = Math.floor(totalCorrect / 10) + 1;
-  let progress = totalCorrect % 10;
+  const required = getRequiredExp(playerRank);
 
-  document.getElementById("rankName").innerText = "RANK " + rank;
-  document.getElementById("rankText").innerText = progress + " / 10";
-  document.getElementById("rankBar").style.width = (progress * 10) + "%";
+  document.getElementById("rankName").innerText = "RANK " + playerRank;
+  document.getElementById("rankText").innerText = currentExp + " / " + required;
+  document.getElementById("rankBar").style.width =
+    (currentExp / required) * 100 + "%";
+}
+
+function addExp(){
+  currentExp++;
+  totalCorrect++;
+
+  let required = getRequiredExp(playerRank);
+
+  if(currentExp >= required){
+    currentExp = 0;
+    playerRank++;
+
+    document.getElementById("quiz").innerHTML +=
+      "<p style='color:gold;'>✨ RANK UP!! ✨</p>";
+  }
+
+  localStorage.setItem("totalCorrect", totalCorrect);
+  localStorage.setItem("playerRank", playerRank);
+  localStorage.setItem("currentExp", currentExp);
+
+  updateRankUI();
 }
 
 /* ===== クイズ ===== */
@@ -242,11 +269,7 @@ function answer(a){
 
   if(user === q.answer){
     score++;
-
-    totalCorrect++;
-    localStorage.setItem("totalCorrect", totalCorrect);
-    updateRankUI();
-
+    addExp();
     html += "<h2 style='color:red;'>⭕ 正解！</h2>";
   }else{
     html += "<h2>❌ 不正解</h2>";
@@ -302,10 +325,8 @@ let timeLeft = 30;
 function startWarning(){
   document.body.classList.add("alert");
 
-  document.getElementById("quiz").innerHTML = `
-    <div class="warning">⚠ WARNING ⚠</div>
-    <p>不審な通信を検知…</p>
-  `;
+  document.getElementById("quiz").innerHTML =
+    `<div class="warning">⚠ WARNING ⚠</div>`;
 
   setTimeout(showLetter,2500);
 }
@@ -313,12 +334,11 @@ function startWarning(){
 function showLetter(){
   document.body.classList.remove("alert");
 
-  document.getElementById("quiz").innerHTML = `
-    <div class="letter">
+  document.getElementById("quiz").innerHTML =
+    `<div class="letter">
       <h3>📜 招待状</h3>
       <button onclick="launchExtra()">開封する</button>
-    </div>
-  `;
+    </div>`;
 }
 
 function loadExtra(){
