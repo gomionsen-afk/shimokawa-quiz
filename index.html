@@ -15,7 +15,7 @@ body{
   margin:0;
 }
 
-/* ランクUI */
+/* ===== ランクUI ===== */
 #rankUI{
   position:fixed;
   top:10px;
@@ -23,34 +23,77 @@ body{
   padding:10px;
   border-radius:10px;
   width:140px;
+  z-index:9999;
   background:#111;
   border:2px solid #fff;
 }
 
-/* 色進化 */
-.rank-1{border:2px solid #fff;}
-.rank-6{border:2px solid #00ff88;}
-.rank-16{border:2px solid #00ccff;}
-.rank-31{border:2px solid #cc66ff;}
-.rank-51{border:2px solid #ffff00;}
-.rank-101{border:2px solid #ff8800;}
-.rank-151{border:2px solid #ff0000;}
-.rank-201{border:3px double gold;}
-
-#rankName{font-weight:bold;}
-
-.rank-bar-wrap{height:8px;background:#444;}
-.rank-bar{height:100%;background:#aaa;width:0%;}
-
-.card{
-  background:#f4f1ea;
-  color:#111;
-  padding:15px;
-  margin:15px auto;
-  max-width:420px;
-  border-radius:5px;
+#rankName{
+  font-size:14px;
+  font-weight:bold;
 }
 
+.rank-bar-wrap{
+  width:100%;
+  height:8px;
+  background:#444;
+}
+
+.rank-bar{
+  height:100%;
+  width:0%;
+  background:#aaa;
+}
+
+#rankText{
+  font-size:12px;
+}
+
+/* ===== ランク進化 ===== */
+.rank-1{border:2px solid #fff;}
+.rank-6{border:2px solid #00ff88; box-shadow:0 0 5px #00ff88;}
+.rank-16{border:2px solid #00ccff; box-shadow:0 0 8px #00ccff;}
+.rank-31{border:2px solid #cc66ff; box-shadow:0 0 10px #cc66ff;}
+.rank-51{border:2px solid #ffff00; box-shadow:0 0 12px #ffff00;}
+.rank-101{border:2px solid #ff8800; box-shadow:0 0 14px #ff8800;}
+.rank-151{border:2px solid #ff0000; box-shadow:0 0 16px #ff0000;}
+.rank-201{
+  border:3px double gold;
+  box-shadow:0 0 20px gold, inset 0 0 10px gold;
+}
+
+/* ===== UI ===== */
+.gauge-wrap{
+  width:90%; max-width:420px;
+  margin:10px auto;
+  background:#555;
+  border-radius:10px;
+  height:10px;
+}
+.gauge{
+  height:100%;
+  width:0%;
+  background:#aaa;
+}
+
+/* ★元デザイン復活＋白文字 */
+.card{
+  background:#f4f1ea;
+  color:#fff;
+  padding:15px;
+  border-radius:5px;
+  margin:15px auto;
+  max-width:420px;
+  box-shadow:0 0 10px rgba(0,0,0,0.5);
+}
+
+/* ★文字だけ白にするため影つける */
+.card h2, .card h3, .card p{
+  color:#fff;
+  text-shadow:0 0 3px #000;
+}
+
+/* ボタン */
 button{
   width:100%;
   margin:8px 0;
@@ -60,16 +103,62 @@ button{
   border:none;
 }
 
+/* 選択肢 */
+.choice{ padding:10px; margin:5px; color:#fff; }
+.correct{ background:#8b0000; color:#fff; }
+.wrong{ background:#777; color:#fff; }
+
+/* 解説 */
 .explanation-box{
+  margin-top:15px;
+  padding:12px;
   background:#222;
   color:#fff;
-  padding:10px;
-  margin-top:10px;
+  border-left:5px solid #ff4444;
+  text-align:left;
 }
 
+/* 結果 */
 .result-box{
-  background:#111;
   padding:20px;
+  border:3px solid #8b0000;
+  background:#111;
+  color:#fff;
+}
+
+.rank{ font-size:24px; }
+
+.timer{ color:#ff4444; font-size:22px; }
+
+/* WARNING */
+body.alert{
+  animation: flashBg 0.5s infinite;
+}
+@keyframes flashBg{
+  0%{ background:#200; }
+  50%{ background:#800; }
+  100%{ background:#200; }
+}
+
+.warning{
+  font-size:28px;
+  color:red;
+  animation: blink 0.8s infinite;
+}
+@keyframes blink{
+  0%{opacity:1;}
+  50%{opacity:0;}
+  100%{opacity:1;}
+}
+
+/* 手紙 */
+.letter{
+  width:280px;
+  margin:30px auto;
+  padding:20px;
+  background:#fdf5e6;
+  color:#111;
+  border:2px solid #8b0000;
 }
 </style>
 </head>
@@ -86,6 +175,10 @@ button{
   <div id="rankText">0 / 10</div>
 </div>
 
+<div class="gauge-wrap">
+  <div id="gauge" class="gauge"></div>
+</div>
+
 <div id="quiz" class="card"></div>
 
 <script>
@@ -98,6 +191,17 @@ let currentExp = Number(localStorage.getItem("currentExp") || 0);
 
 function getRequiredExp(rank){
   return 9 + rank;
+}
+
+function getRankColor(rank){
+  if(rank<=5) return "#fff";
+  if(rank<=15) return "#00ff88";
+  if(rank<=30) return "#00ccff";
+  if(rank<=50) return "#cc66ff";
+  if(rank<=100) return "#ffff00";
+  if(rank<=150) return "#ff8800";
+  if(rank<=200) return "#ff0000";
+  return "gold";
 }
 
 function updateRankUI(){
@@ -117,6 +221,8 @@ function updateRankUI(){
   else ui.classList.add("rank-1");
 
   document.getElementById("rankName").innerText = "RANK " + playerRank;
+  document.getElementById("rankName").style.color = getRankColor(playerRank);
+
   document.getElementById("rankText").innerText =
     currentExp + " / " + required;
 
@@ -124,9 +230,8 @@ function updateRankUI(){
     (currentExp / required) * 100 + "%";
 }
 
-function addExp(amount=1){
-  currentExp += amount;
-
+function addExp(){
+  currentExp++;
   let required = getRequiredExp(playerRank);
 
   if(currentExp >= required){
@@ -140,45 +245,52 @@ function addExp(amount=1){
   updateRankUI();
 }
 
-/* ===== CSV安全パース ===== */
-function parseCSV(text){
-  const rows = text.trim().split("\n");
-  return rows.map(r=>{
-    return r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-  });
-}
-
-/* ===== クイズ ===== */
+/* ===== クイズ（そのまま安定版） ===== */
 let questions = [];
 let current = 0;
 let score = 0;
 
+function parseCSV(text){
+  return text.trim().split("\n").map(r=>r.split(","));
+}
+
 function normalize(str){
-  return (str || "").trim().toUpperCase();
+  return (str || "")
+    .trim()
+    .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0)-65248))
+    .toUpperCase();
 }
 
 fetch(url)
-.then(r=>r.text())
+.then(res=>res.text())
 .then(data=>{
   const rows = parseCSV(data).slice(1);
 
-  questions = rows.map(c=>({
-    q:c[0],
-    choices:[c[1],c[2],c[3]],
-    answer: normalize(c[4]),
-    explanation:c[5]
-  })).filter(q=>q.q && q.answer);
+  questions = rows
+    .filter(c => c.length>=5 && c[0] && c[4])
+    .map(c=>({
+      q:c[0],
+      choices:[c[1],c[2],c[3]],
+      answer: normalize(c[4]),
+      explanation:c[5]
+    }));
 
-  questions = questions.sort(()=>Math.random()-0.5).slice(0,10);
+  questions = questions.sort(()=>0.5-Math.random()).slice(0,10);
 
   updateRankUI();
   showQuestion();
 });
 
+function updateGauge(){
+  document.getElementById("gauge").style.width =
+    (current / questions.length) * 100 + "%";
+}
+
 function showQuestion(){
+  updateGauge();
   const q = questions[current];
 
-  let html = `<h2>${q.q}</h2>`;
+  let html = `<h2>第${current+1}問：${q.q}</h2>`;
 
   ["A","B","C"].forEach((l,i)=>{
     html += `<button onclick="answer('${l}')">${q.choices[i]}</button>`;
@@ -189,18 +301,22 @@ function showQuestion(){
 
 function answer(a){
   const q = questions[current];
+  const user = normalize(a);
 
-  if(normalize(a) === q.answer){
+  let html = "";
+
+  if(user === q.answer){
     score++;
-    addExp(1);
-    alert("正解！");
+    addExp();
+    html += "<h2 style='color:#ff4444;'>⭕ 正解！</h2>";
   }else{
-    alert("不正解");
+    html += "<h2>❌ 不正解</h2>";
   }
 
-  document.getElementById("quiz").innerHTML =
-    `<div class="explanation-box">${q.explanation}</div>
-     <button onclick="next()">次へ</button>`;
+  html += `<div class="explanation-box">${q.explanation}</div>`;
+  html += "<button onclick='next()'>次へ</button>";
+
+  document.getElementById("quiz").innerHTML = html;
 }
 
 function next(){
@@ -209,56 +325,123 @@ function next(){
   if(current < questions.length){
     showQuestion();
   }else{
-    endGame();
-  }
-}
 
-function endGame(){
-  document.getElementById("quiz").innerHTML =
-  `<div class="result-box">
-    ${score}/10 正解
-  </div>`;
+    document.getElementById("quiz").innerHTML =
+    `<div class="result-box">
+      <h2>捜査完了</h2>
+      <p>${score} / 10 問正解！</p>
+    </div>`;
 
-  if(score===10){
-    setTimeout(startExtra,2000);
+    if(score === 10){
+      setTimeout(startWarning,2000);
+    }
   }
 }
 
 /* ===== エクストラ ===== */
-function startExtra(){
-  fetch(extraUrl)
-  .then(r=>r.text())
+let extraCurrent;
+let timer;
+let timeLeft = 30;
+
+function startWarning(){
+  document.body.classList.add("alert");
+
+  document.getElementById("quiz").innerHTML =
+    `<div class="warning">⚠ WARNING ⚠</div>`;
+
+  setTimeout(showLetter,2500);
+}
+
+function showLetter(){
+  document.body.classList.remove("alert");
+
+  document.getElementById("quiz").innerHTML =
+    `<div class="letter">
+      <h3>📜 招待状</h3>
+      <button onclick="launchExtra()">開封する</button>
+    </div>`;
+}
+
+function loadExtra(){
+  return fetch(extraUrl)
+  .then(res=>res.text())
   .then(data=>{
     const rows = parseCSV(data).slice(1);
-
-    const extra = rows.map(c=>({
+    const extra = rows.filter(c=>c[0]&&c[4]).map(c=>({
       q:c[0],
       choices:[c[1],c[2],c[3]],
       answer: normalize(c[4]),
       explanation:c[5]
     }));
 
-    const q = extra[Math.floor(Math.random()*extra.length)];
-
-    let html = `<h2>EXTRA</h2><h3>${q.q}</h3>`;
-
-    ["A","B","C"].forEach((l,i)=>{
-      html += `<button onclick="answerExtra('${l}','${q.answer}',\`${q.explanation}\`)">${q.choices[i]}</button>`;
-    });
-
-    document.getElementById("quiz").innerHTML = html;
+    return extra[Math.floor(Math.random()*extra.length)];
   });
 }
 
-function answerExtra(a,ans,exp){
-  if(normalize(a) === ans){
-    addExp(5); // ★ここが今回のポイント
-    alert("完全勝利！EXP+5");
+function launchExtra(){
+  loadExtra().then(startExtra);
+}
+
+function startExtra(q){
+  extraCurrent=q;
+  timeLeft=30;
+
+  clearInterval(timer);
+  timer=setInterval(()=>{
+    timeLeft--;
+    document.getElementById("timer").innerText=timeLeft;
+
+    if(timeLeft<=0){
+      clearInterval(timer);
+      showFail();
+    }
+  },1000);
+
+  let html=`
+    <h2 style="color:red;">🚨 緊急ミッション 🚨</h2>
+    <div class="timer">残り <span id="timer">30</span> 秒</div>
+    <h3>${q.q}</h3>
+  `;
+
+  ["A","B","C"].forEach((l,i)=>{
+    html+=`<button onclick="answerExtra('${l}')">${q.choices[i]}</button>`;
+  });
+
+  document.getElementById("quiz").innerHTML=html;
+}
+
+function answerExtra(a){
+  clearInterval(timer);
+
+  const q = extraCurrent;
+  const user = normalize(a);
+
+  let html = "";
+
+  if(user === q.answer){
+    html = `<div class="result-box">
+      <h2 style="color:#0f0;">完全勝利</h2>
+      <p>${q.explanation}</p>
+      <button onclick='location.reload()'>もう一度</button>
+    </div>`;
   }else{
-    alert("失敗");
+    html = `<div class="result-box">
+      <h2 style="color:red;">失敗</h2>
+      <p>正解：${q.answer}</p>
+      <p>${q.explanation}</p>
+      <button onclick='location.reload()'>再挑戦</button>
+    </div>`;
   }
 
-  location.reload();
+  document.getElementById("quiz").innerHTML = html;
+}
+
+function showFail(){
+  document.getElementById("quiz").innerHTML =
+  `<div class="result-box">
+    <h2>時間切れ…</h2>
+    <button onclick='location.reload()'>再挑戦</button>
+  </div>`;
 }
 </script>
 
