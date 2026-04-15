@@ -15,7 +15,7 @@ body{
   margin:0;
 }
 
-/* ===== 探偵ランクUI ===== */
+/* ===== ランクUI ===== */
 #rankUI{
   position:fixed;
   top:10px;
@@ -23,44 +23,17 @@ body{
   width:140px;
   padding:12px;
   background:linear-gradient(#2b1a12,#120c08);
-  color:#eee;
   border:2px solid #5a2a1a;
   border-radius:8px;
-  box-shadow:0 0 10px rgba(0,0,0,0.8),
-             inset 0 0 10px rgba(255,255,255,0.05);
-  z-index:9999;
 }
 
-#rankName{
-  font-size:14px;
-  color:#ff4444;
-  font-weight:bold;
-}
+#rankName{ color:#ff4444; font-weight:bold; }
+.rank-bar-wrap{ background:#111; height:8px; margin:5px 0; }
+.rank-bar{ height:100%; width:0%; background:#ff4444; }
+#rankText{ font-size:12px; }
 
-.rank-bar-wrap{
-  width:100%;
-  height:8px;
-  background:#111;
-  border:1px solid #333;
-  border-radius:5px;
-  margin:6px 0;
-}
-
-.rank-bar{
-  height:100%;
-  width:0%;
-  background:linear-gradient(90deg,#550000,#ff4444);
-}
-
-#rankText{ font-size:11px; }
-
-/* ===== UI ===== */
-.gauge-wrap{
-  width:90%; max-width:420px;
-  margin:10px auto;
-  background:#555;
-  height:10px;
-}
+/* UI */
+.gauge-wrap{ width:90%; max-width:420px; margin:10px auto; background:#555; height:10px;}
 .gauge{ height:100%; width:0%; background:#aaa; }
 
 .card{
@@ -81,11 +54,6 @@ button{
   border:none;
 }
 
-/* 選択肢 */
-.choice{ padding:10px; margin:5px; }
-.correct{ background:#8b0000; color:#fff; }
-.wrong{ background:#777; color:#fff; }
-
 .explanation-box{
   margin-top:15px;
   padding:12px;
@@ -93,7 +61,6 @@ button{
   color:#fff;
 }
 
-/* 結果 */
 .result-box{
   padding:20px;
   border:3px solid #8b0000;
@@ -102,14 +69,12 @@ button{
 
 .rank{ font-size:24px; color:#ff4444; }
 
-/* WARNING */
 body.alert{ animation:flash 0.5s infinite; }
 @keyframes flash{
   0%{background:#200;}
   50%{background:#800;}
   100%{background:#200;}
 }
-
 </style>
 </head>
 
@@ -129,11 +94,11 @@ body.alert{ animation:flash 0.5s infinite; }
   <div id="gauge" class="gauge"></div>
 </div>
 
-<div id="quiz" class="card"></div>
+<div id="quiz" class="card">読み込み中...</div>
 
 <script>
-const url = "ここに通常シートURL";
-const extraUrl = "ここにエクストラURL";
+const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&single=true&output=csv";
+const extraUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=1390184656&single=true&output=csv";
 
 let questions=[],current=0,score=0;
 let extraQ;
@@ -161,22 +126,44 @@ function addExp(){
   updateRank();
 }
 
-/* ===== 正規化 ===== */
+/* ===== 正規化（超重要） ===== */
 function normalize(s){
-  return (s||"").trim().replace(/[Ａ-Ｚ]/g,s=>String.fromCharCode(s.charCodeAt(0)-65248)).toUpperCase();
+  return (s||"")
+    .trim()
+    .replace(/[Ａ-Ｚ]/g,s=>String.fromCharCode(s.charCodeAt(0)-65248))
+    .toUpperCase();
 }
 
 /* ===== 問題取得 ===== */
-fetch(url).then(r=>r.text()).then(t=>{
-  questions=t.split("\n").slice(1).map(r=>{
+fetch(url)
+.then(r=>{
+  if(!r.ok) throw new Error("CSV取得失敗");
+  return r.text();
+})
+.then(t=>{
+  const rows = t.split("\n").slice(1);
+
+  questions = rows.map(r=>{
     const c=r.split(",");
-    return {q:c[0],choices:[c[1],c[2],c[3]],a:normalize(c[4]),e:c[5]};
+    return {
+      q:c[0],
+      choices:[c[1],c[2],c[3]],
+      a:normalize(c[4]),
+      e:c[5]
+    };
   }).filter(q=>q.q && q.a);
+
+  if(questions.length===0) throw new Error("問題データが空");
 
   questions=questions.sort(()=>0.5-Math.random()).slice(0,10);
   showQ();
+})
+.catch(e=>{
+  document.getElementById("quiz").innerHTML =
+    "<h2>問題読み込み失敗😢</h2><p>"+e+"</p>";
 });
 
+/* ===== 表示 ===== */
 function showQ(){
   document.getElementById("gauge").style.width=(current/10*100)+"%";
   const q=questions[current];
@@ -232,7 +219,9 @@ function next(){
 function startExtra(){
   document.body.classList.add("alert");
 
-  fetch(extraUrl).then(r=>r.text()).then(t=>{
+  fetch(extraUrl)
+  .then(r=>r.text())
+  .then(t=>{
     const rows=t.split("\n").slice(1);
     const r=rows[Math.floor(Math.random()*rows.length)].split(",");
     extraQ={q:r[0],choices:[r[1],r[2],r[3]],a:normalize(r[4])};
