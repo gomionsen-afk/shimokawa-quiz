@@ -76,7 +76,6 @@ body{
   background:#aaa;
 }
 
-/* ★元デザイン復活＋白文字 */
 .card{
   background:#f4f1ea;
   color:#fff;
@@ -84,16 +83,12 @@ body{
   border-radius:5px;
   margin:15px auto;
   max-width:420px;
-  box-shadow:0 0 10px rgba(0,0,0,0.5);
 }
 
-/* ★文字だけ白にするため影つける */
 .card h2, .card h3, .card p{
-  color:#fff;
   text-shadow:0 0 3px #000;
 }
 
-/* ボタン */
 button{
   width:100%;
   margin:8px 0;
@@ -103,12 +98,10 @@ button{
   border:none;
 }
 
-/* 選択肢 */
 .choice{ padding:10px; margin:5px; color:#fff; }
-.correct{ background:#8b0000; color:#fff; }
-.wrong{ background:#777; color:#fff; }
+.correct{ background:#8b0000; }
+.wrong{ background:#777; }
 
-/* 解説 */
 .explanation-box{
   margin-top:15px;
   padding:12px;
@@ -118,15 +111,11 @@ button{
   text-align:left;
 }
 
-/* 結果 */
 .result-box{
   padding:20px;
   border:3px solid #8b0000;
   background:#111;
-  color:#fff;
 }
-
-.rank{ font-size:24px; }
 
 .timer{ color:#ff4444; font-size:22px; }
 
@@ -151,7 +140,6 @@ body.alert{
   100%{opacity:1;}
 }
 
-/* 手紙 */
 .letter{
   width:280px;
   margin:30px auto;
@@ -182,8 +170,8 @@ body.alert{
 <div id="quiz" class="card"></div>
 
 <script>
-const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&single=true&output=csv";
-const extraUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=1390184656&single=true&output=csv";
+const url = "（そのまま）";
+const extraUrl = "（そのまま）";
 
 /* ===== ランク ===== */
 let playerRank = Number(localStorage.getItem("playerRank") || 1);
@@ -193,36 +181,21 @@ function getRequiredExp(rank){
   return 9 + rank;
 }
 
-function getRankColor(rank){
-  if(rank<=5) return "#fff";
-  if(rank<=15) return "#00ff88";
-  if(rank<=30) return "#00ccff";
-  if(rank<=50) return "#cc66ff";
-  if(rank<=100) return "#ffff00";
-  if(rank<=150) return "#ff8800";
-  if(rank<=200) return "#ff0000";
-  return "gold";
-}
-
 function updateRankUI(){
   const required = getRequiredExp(playerRank);
   const ui = document.getElementById("rankUI");
 
-  ui.className = "";
-  ui.id = "rankUI";
-
-  if(playerRank>=201) ui.classList.add("rank-201");
-  else if(playerRank>=151) ui.classList.add("rank-151");
-  else if(playerRank>=101) ui.classList.add("rank-101");
-  else if(playerRank>=51) ui.classList.add("rank-51");
-  else if(playerRank>=31) ui.classList.add("rank-31");
-  else if(playerRank>=16) ui.classList.add("rank-16");
-  else if(playerRank>=6) ui.classList.add("rank-6");
-  else ui.classList.add("rank-1");
+  ui.className = "rank-" + (
+    playerRank>=201 ? 201 :
+    playerRank>=151 ? 151 :
+    playerRank>=101 ? 101 :
+    playerRank>=51 ? 51 :
+    playerRank>=31 ? 31 :
+    playerRank>=16 ? 16 :
+    playerRank>=6 ? 6 : 1
+  );
 
   document.getElementById("rankName").innerText = "RANK " + playerRank;
-  document.getElementById("rankName").style.color = getRankColor(playerRank);
-
   document.getElementById("rankText").innerText =
     currentExp + " / " + required;
 
@@ -230,13 +203,16 @@ function updateRankUI(){
     (currentExp / required) * 100 + "%";
 }
 
-function addExp(){
-  currentExp++;
+/* ★ここが進化 */
+function addExp(amount = 1){
+  currentExp += amount;
+
   let required = getRequiredExp(playerRank);
 
-  if(currentExp >= required){
-    currentExp = 0;
+  while(currentExp >= required){
+    currentExp -= required;
     playerRank++;
+    required = getRequiredExp(playerRank);
   }
 
   localStorage.setItem("playerRank", playerRank);
@@ -245,7 +221,7 @@ function addExp(){
   updateRankUI();
 }
 
-/* ===== クイズ（そのまま安定版） ===== */
+/* ===== クイズ ===== */
 let questions = [];
 let current = 0;
 let score = 0;
@@ -255,10 +231,7 @@ function parseCSV(text){
 }
 
 function normalize(str){
-  return (str || "")
-    .trim()
-    .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0)-65248))
-    .toUpperCase();
+  return (str||"").trim().toUpperCase();
 }
 
 fetch(url)
@@ -266,16 +239,12 @@ fetch(url)
 .then(data=>{
   const rows = parseCSV(data).slice(1);
 
-  questions = rows
-    .filter(c => c.length>=5 && c[0] && c[4])
-    .map(c=>({
-      q:c[0],
-      choices:[c[1],c[2],c[3]],
-      answer: normalize(c[4]),
-      explanation:c[5]
-    }));
-
-  questions = questions.sort(()=>0.5-Math.random()).slice(0,10);
+  questions = rows.map(c=>({
+    q:c[0],
+    choices:[c[1],c[2],c[3]],
+    answer: normalize(c[4]),
+    explanation:c[5]
+  })).slice(0,10);
 
   updateRankUI();
   showQuestion();
@@ -290,13 +259,11 @@ function showQuestion(){
   updateGauge();
   const q = questions[current];
 
-  let html = `<h2>第${current+1}問：${q.q}</h2>`;
-
-  ["A","B","C"].forEach((l,i)=>{
-    html += `<button onclick="answer('${l}')">${q.choices[i]}</button>`;
-  });
-
-  document.getElementById("quiz").innerHTML = html;
+  document.getElementById("quiz").innerHTML =
+    `<h2>第${current+1}問：${q.q}</h2>` +
+    ["A","B","C"].map((l,i)=>
+      `<button onclick="answer('${l}')">${q.choices[i]}</button>`
+    ).join("");
 }
 
 function answer(a){
@@ -307,7 +274,7 @@ function answer(a){
 
   if(user === q.answer){
     score++;
-    addExp();
+    addExp(1);
     html += "<h2 style='color:#ff4444;'>⭕ 正解！</h2>";
   }else{
     html += "<h2>❌ 不正解</h2>";
@@ -325,7 +292,6 @@ function next(){
   if(current < questions.length){
     showQuestion();
   }else{
-
     document.getElementById("quiz").innerHTML =
     `<div class="result-box">
       <h2>捜査完了</h2>
@@ -345,16 +311,13 @@ let timeLeft = 30;
 
 function startWarning(){
   document.body.classList.add("alert");
-
   document.getElementById("quiz").innerHTML =
     `<div class="warning">⚠ WARNING ⚠</div>`;
-
   setTimeout(showLetter,2500);
 }
 
 function showLetter(){
   document.body.classList.remove("alert");
-
   document.getElementById("quiz").innerHTML =
     `<div class="letter">
       <h3>📜 招待状</h3>
@@ -367,13 +330,12 @@ function loadExtra(){
   .then(res=>res.text())
   .then(data=>{
     const rows = parseCSV(data).slice(1);
-    const extra = rows.filter(c=>c[0]&&c[4]).map(c=>({
+    const extra = rows.map(c=>({
       q:c[0],
       choices:[c[1],c[2],c[3]],
       answer: normalize(c[4]),
       explanation:c[5]
     }));
-
     return extra[Math.floor(Math.random()*extra.length)];
   });
 }
@@ -397,11 +359,9 @@ function startExtra(q){
     }
   },1000);
 
-  let html=`
-    <h2 style="color:red;">🚨 緊急ミッション 🚨</h2>
-    <div class="timer">残り <span id="timer">30</span> 秒</div>
-    <h3>${q.q}</h3>
-  `;
+  let html=`<h2>🚨 緊急ミッション 🚨</h2>
+  <div class="timer">残り <span id="timer">30</span> 秒</div>
+  <h3>${q.q}</h3>`;
 
   ["A","B","C"].forEach((l,i)=>{
     html+=`<button onclick="answerExtra('${l}')">${q.choices[i]}</button>`;
@@ -410,6 +370,7 @@ function startExtra(q){
   document.getElementById("quiz").innerHTML=html;
 }
 
+/* ★ここでEXP+5 */
 function answerExtra(a){
   clearInterval(timer);
 
@@ -419,8 +380,11 @@ function answerExtra(a){
   let html = "";
 
   if(user === q.answer){
+    addExp(5); // ←ボーナス！！
+
     html = `<div class="result-box">
       <h2 style="color:#0f0;">完全勝利</h2>
+      <p>✨ 経験値 +5</p>
       <p>${q.explanation}</p>
       <button onclick='location.reload()'>もう一度</button>
     </div>`;
@@ -428,7 +392,6 @@ function answerExtra(a){
     html = `<div class="result-box">
       <h2 style="color:red;">失敗</h2>
       <p>正解：${q.answer}</p>
-      <p>${q.explanation}</p>
       <button onclick='location.reload()'>再挑戦</button>
     </div>`;
   }
