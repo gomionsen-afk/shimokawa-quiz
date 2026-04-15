@@ -28,7 +28,6 @@ body{
   border-radius:8px;
   box-shadow:0 0 10px rgba(0,0,0,0.8),
              inset 0 0 10px rgba(255,255,255,0.05);
-  font-family:"Yu Mincho",serif;
   z-index:9999;
 }
 
@@ -36,8 +35,6 @@ body{
   font-size:14px;
   color:#ff4444;
   font-weight:bold;
-  letter-spacing:1px;
-  text-shadow:0 0 5px rgba(255,0,0,0.5);
 }
 
 .rank-bar-wrap{
@@ -53,38 +50,18 @@ body{
   height:100%;
   width:0%;
   background:linear-gradient(90deg,#550000,#ff4444);
-  box-shadow:0 0 8px rgba(255,0,0,0.6);
-  transition:0.3s;
 }
 
-#rankText{
-  font-size:11px;
-  color:#ccc;
-}
-
-.rank-up-effect{
-  animation: glow 1s ease;
-}
-
-@keyframes glow{
-  0%{ box-shadow:0 0 0 rgba(255,0,0,0); }
-  50%{ box-shadow:0 0 20px rgba(255,0,0,0.8); }
-  100%{ box-shadow:0 0 0 rgba(255,0,0,0); }
-}
+#rankText{ font-size:11px; }
 
 /* ===== UI ===== */
 .gauge-wrap{
   width:90%; max-width:420px;
   margin:10px auto;
   background:#555;
-  border-radius:10px;
   height:10px;
 }
-.gauge{
-  height:100%;
-  width:0%;
-  background:#aaa;
-}
+.gauge{ height:100%; width:0%; background:#aaa; }
 
 .card{
   background:#f4f1ea;
@@ -109,14 +86,11 @@ button{
 .correct{ background:#8b0000; color:#fff; }
 .wrong{ background:#777; color:#fff; }
 
-/* 解説 */
 .explanation-box{
   margin-top:15px;
   padding:12px;
   background:#111;
   color:#fff;
-  border-left:5px solid #ff4444;
-  text-align:left;
 }
 
 /* 結果 */
@@ -124,43 +98,18 @@ button{
   padding:20px;
   border:3px solid #8b0000;
   background:#111;
-  color:#fff;
 }
 
 .rank{ font-size:24px; color:#ff4444; }
 
-.timer{ color:red; font-size:22px; }
-
 /* WARNING */
-body.alert{
-  animation: flashBg 0.5s infinite;
-}
-@keyframes flashBg{
-  0%{ background:#200; }
-  50%{ background:#800; }
-  100%{ background:#200; }
+body.alert{ animation:flash 0.5s infinite; }
+@keyframes flash{
+  0%{background:#200;}
+  50%{background:#800;}
+  100%{background:#200;}
 }
 
-.warning{
-  font-size:28px;
-  color:red;
-  animation: blink 0.8s infinite;
-}
-@keyframes blink{
-  0%{opacity:1;}
-  50%{opacity:0;}
-  100%{opacity:1;}
-}
-
-/* 手紙 */
-.letter{
-  width:280px;
-  margin:30px auto;
-  padding:20px;
-  background:#fdf5e6;
-  color:#111;
-  border:2px solid #8b0000;
-}
 </style>
 </head>
 
@@ -183,55 +132,135 @@ body.alert{
 <div id="quiz" class="card"></div>
 
 <script>
-const url = "（そのまま）";
-const extraUrl = "（そのまま）";
+const url = "ここに通常シートURL";
+const extraUrl = "ここにエクストラURL";
+
+let questions=[],current=0,score=0;
+let extraQ;
 
 /* ===== ランク ===== */
-let totalCorrect = Number(localStorage.getItem("totalCorrect") || 0);
-let playerRank = Number(localStorage.getItem("playerRank") || 1);
-let currentExp = Number(localStorage.getItem("currentExp") || 0);
+let playerRank = Number(localStorage.getItem("rank")||1);
+let exp = Number(localStorage.getItem("exp")||0);
 
-function getRequiredExp(rank){
-  return 9 + rank;
-}
+function needExp(){ return 9 + playerRank; }
 
-function updateRankUI(){
-  const required = getRequiredExp(playerRank);
-  document.getElementById("rankName").innerText = "RANK " + playerRank;
-  document.getElementById("rankText").innerText = currentExp + " / " + required;
-  document.getElementById("rankBar").style.width =
-    (currentExp / required) * 100 + "%";
+function updateRank(){
+  document.getElementById("rankName").innerText="RANK "+playerRank;
+  document.getElementById("rankText").innerText=exp+" / "+needExp();
+  document.getElementById("rankBar").style.width=(exp/needExp()*100)+"%";
 }
 
 function addExp(){
-  currentExp++;
-  totalCorrect++;
-
-  let required = getRequiredExp(playerRank);
-
-  if(currentExp >= required){
-    currentExp = 0;
+  exp++;
+  if(exp>=needExp()){
+    exp=0;
     playerRank++;
-
-    const ui = document.getElementById("rankUI");
-    ui.classList.add("rank-up-effect");
-    setTimeout(()=>ui.classList.remove("rank-up-effect"),1000);
-
-    document.getElementById("quiz").innerHTML +=
-      "<p style='color:gold;'>✨ RANK UP!! ✨</p>";
   }
-
-  localStorage.setItem("totalCorrect", totalCorrect);
-  localStorage.setItem("playerRank", playerRank);
-  localStorage.setItem("currentExp", currentExp);
-
-  updateRankUI();
+  localStorage.setItem("rank",playerRank);
+  localStorage.setItem("exp",exp);
+  updateRank();
 }
 
-/* ===== クイズ部分（今のままでOK） ===== */
-/* ※あなたの既存コードそのまま貼ればOK */
+/* ===== 正規化 ===== */
+function normalize(s){
+  return (s||"").trim().replace(/[Ａ-Ｚ]/g,s=>String.fromCharCode(s.charCodeAt(0)-65248)).toUpperCase();
+}
 
-updateRankUI();
+/* ===== 問題取得 ===== */
+fetch(url).then(r=>r.text()).then(t=>{
+  questions=t.split("\n").slice(1).map(r=>{
+    const c=r.split(",");
+    return {q:c[0],choices:[c[1],c[2],c[3]],a:normalize(c[4]),e:c[5]};
+  }).filter(q=>q.q && q.a);
+
+  questions=questions.sort(()=>0.5-Math.random()).slice(0,10);
+  showQ();
+});
+
+function showQ(){
+  document.getElementById("gauge").style.width=(current/10*100)+"%";
+  const q=questions[current];
+
+  let h=`<h2>${q.q}</h2>`;
+  ["A","B","C"].forEach((l,i)=>{
+    h+=`<button onclick="ans('${l}')">${q.choices[i]}</button>`;
+  });
+
+  quiz.innerHTML=h;
+}
+
+function ans(a){
+  const q=questions[current];
+  const user=normalize(a);
+
+  let h="";
+
+  if(user===q.a){
+    score++; addExp();
+    h+="<h2 style='color:red;'>⭕ 正解！</h2>";
+  }else{
+    h+="<h2>❌ 不正解</h2>";
+  }
+
+  h+=`<p>正解：${q.a}</p>`;
+  h+=`<div class="explanation-box">${q.e}</div>`;
+  h+="<button onclick='next()'>次へ</button>";
+
+  quiz.innerHTML=h;
+}
+
+function next(){
+  current++;
+  if(current<10){ showQ(); }
+  else{
+    let rank="修行不足";
+    if(score==10) rank="名探偵";
+    else if(score>=8) rank="まあ探偵";
+    else if(score>=5) rank="眠りの小五郎";
+
+    quiz.innerHTML=`
+    <div class="result-box">
+      <h2>${score}/10</h2>
+      <div class="rank">${rank}</div>
+    </div>`;
+
+    if(score==10) setTimeout(startExtra,2000);
+  }
+}
+
+/* ===== エクストラ ===== */
+function startExtra(){
+  document.body.classList.add("alert");
+
+  fetch(extraUrl).then(r=>r.text()).then(t=>{
+    const rows=t.split("\n").slice(1);
+    const r=rows[Math.floor(Math.random()*rows.length)].split(",");
+    extraQ={q:r[0],choices:[r[1],r[2],r[3]],a:normalize(r[4])};
+    showExtra();
+  });
+}
+
+function showExtra(){
+  document.body.classList.remove("alert");
+
+  let h=`<h2 style="color:red;">🚨 緊急ミッション</h2><h3>${extraQ.q}</h3>`;
+  ["A","B","C"].forEach((l,i)=>{
+    h+=`<button onclick="ansExtra('${l}')">${extraQ.choices[i]}</button>`;
+  });
+  quiz.innerHTML=h;
+}
+
+function ansExtra(a){
+  const user=normalize(a);
+
+  if(user===extraQ.a){
+    quiz.innerHTML="<h2>完全勝利🔥</h2>";
+  }else{
+    quiz.innerHTML="<h2>失敗…</h2>";
+  }
+}
+
+updateRank();
 </script>
 
 </body>
