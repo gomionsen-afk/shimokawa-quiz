@@ -76,14 +76,21 @@ body{
   background:#aaa;
 }
 
-/* ★黒背景に変更（超重要） */
+/* ★元デザイン復活＋白文字 */
 .card{
-  background:#111;
+  background:#f4f1ea;
   color:#fff;
   padding:15px;
   border-radius:5px;
   margin:15px auto;
   max-width:420px;
+  box-shadow:0 0 10px rgba(0,0,0,0.5);
+}
+
+/* ★文字だけ白にするため影つける */
+.card h2, .card h3, .card p{
+  color:#fff;
+  text-shadow:0 0 3px #000;
 }
 
 /* ボタン */
@@ -105,7 +112,7 @@ button{
 .explanation-box{
   margin-top:15px;
   padding:12px;
-  background:#000;
+  background:#222;
   color:#fff;
   border-left:5px solid #ff4444;
   text-align:left;
@@ -115,13 +122,12 @@ button{
 .result-box{
   padding:20px;
   border:3px solid #8b0000;
-  background:#000;
+  background:#111;
   color:#fff;
 }
 
 .rank{ font-size:24px; }
 
-/* タイマー */
 .timer{ color:#ff4444; font-size:22px; }
 
 /* WARNING */
@@ -150,8 +156,8 @@ body.alert{
   width:280px;
   margin:30px auto;
   padding:20px;
-  background:#222;
-  color:#fff;
+  background:#fdf5e6;
+  color:#111;
   border:2px solid #8b0000;
 }
 </style>
@@ -200,8 +206,8 @@ function getRankColor(rank){
 
 function updateRankUI(){
   const required = getRequiredExp(playerRank);
-
   const ui = document.getElementById("rankUI");
+
   ui.className = "";
   ui.id = "rankUI";
 
@@ -239,7 +245,7 @@ function addExp(){
   updateRankUI();
 }
 
-/* ===== クイズ ===== */
+/* ===== クイズ（そのまま安定版） ===== */
 let questions = [];
 let current = 0;
 let score = 0;
