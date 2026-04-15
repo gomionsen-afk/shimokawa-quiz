@@ -51,8 +51,7 @@ body{
   font-size:12px;
 }
 
-h1{ font-size:24px; }
-
+/* ===== UI ===== */
 .gauge-wrap{
   width:90%; max-width:420px;
   margin:10px auto;
@@ -103,6 +102,38 @@ button{
 }
 
 .rank{ font-size:24px; color:#ff4444; }
+
+.timer{ color:red; font-size:22px; }
+
+/* WARNING演出 */
+body.alert{
+  animation: flashBg 0.5s infinite;
+}
+@keyframes flashBg{
+  0%{ background:#200; }
+  50%{ background:#800; }
+  100%{ background:#200; }
+}
+
+.warning{
+  font-size:28px;
+  color:red;
+  animation: blink 0.8s infinite;
+}
+@keyframes blink{
+  0%{opacity:1;}
+  50%{opacity:0;}
+  100%{opacity:1;}
+}
+
+.letter{
+  width:280px;
+  margin:30px auto;
+  padding:20px;
+  background:#fdf5e6;
+  color:#111;
+  border:2px solid #8b0000;
+}
 </style>
 </head>
 
@@ -110,7 +141,7 @@ button{
 
 <h1>ごみおんせん推理録!!</h1>
 
-<!-- ランクUI -->
+<!-- ランク -->
 <div id="rankUI">
   <div id="rankName">RANK 1</div>
   <div class="rank-bar-wrap">
@@ -127,16 +158,16 @@ button{
 
 <script>
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&single=true&output=csv";
+const extraUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=1390184656&single=true&output=csv";
 
-/* ===== ランクシステム ===== */
+/* ===== ランク ===== */
 let totalCorrect = Number(localStorage.getItem("totalCorrect") || 0);
-let playerRank = Math.floor(totalCorrect / 10) + 1;
 
 function updateRankUI(){
-  playerRank = Math.floor(totalCorrect / 10) + 1;
-  const progress = totalCorrect % 10;
+  let rank = Math.floor(totalCorrect / 10) + 1;
+  let progress = totalCorrect % 10;
 
-  document.getElementById("rankName").innerText = "RANK " + playerRank;
+  document.getElementById("rankName").innerText = "RANK " + rank;
   document.getElementById("rankText").innerText = progress + " / 10";
   document.getElementById("rankBar").style.width = (progress * 10) + "%";
 }
@@ -146,7 +177,6 @@ let questions = [];
 let current = 0;
 let score = 0;
 
-/* CSV */
 function parseCSV(text){
   return text.split("\n").map(r=>r.split(","));
 }
@@ -175,13 +205,11 @@ fetch(url)
   showQuestion();
 });
 
-/* ゲージ */
 function updateGauge(){
   document.getElementById("gauge").style.width =
     (current / questions.length) * 100 + "%";
 }
 
-/* 問題 */
 function showQuestion(){
   updateGauge();
   const q = questions[current];
@@ -195,7 +223,7 @@ function showQuestion(){
   document.getElementById("quiz").innerHTML = html;
 }
 
-/* 回答 */
+/* ===== 回答 ===== */
 function answer(a){
   const q = questions[current];
   const user = normalize(a);
@@ -205,7 +233,6 @@ function answer(a){
   if(user === q.answer){
     score++;
 
-    // ★ランク加算
     totalCorrect++;
     localStorage.setItem("totalCorrect", totalCorrect);
     updateRankUI();
@@ -214,8 +241,6 @@ function answer(a){
   }else{
     html += "<h2>❌ 不正解</h2>";
   }
-
-  html += `<p>あなた：${user} ／ 正解：${q.answer}</p>`;
 
   ["A","B","C"].forEach((l,i)=>{
     let cls="";
@@ -231,19 +256,142 @@ function answer(a){
   document.getElementById("quiz").innerHTML = html;
 }
 
-/* 次へ */
+/* ===== 次へ ===== */
 function next(){
   current++;
 
   if(current < questions.length){
     showQuestion();
   }else{
+
+    let rank="";
+    if(score===10) rank="名探偵";
+    else if(score>=8) rank="まあ探偵";
+    else if(score>=5) rank="眠りの小五郎";
+    else rank="修行不足";
+
     document.getElementById("quiz").innerHTML =
     `<div class="result-box">
       <h2>捜査完了</h2>
-      <p>${score} / 10</p>
+      <p>${score} / 10 問正解！</p>
+      <div class="rank">${rank}</div>
+    </div>`;
+
+    /* ★満点でエクストラ */
+    if(score === 10){
+      setTimeout(startWarning,3000);
+    }
+  }
+}
+
+/* ===== エクストラ ===== */
+let extraCurrent;
+let timer;
+let timeLeft = 30;
+
+function startWarning(){
+  document.body.classList.add("alert");
+
+  document.getElementById("quiz").innerHTML = `
+    <div class="warning">⚠ WARNING ⚠</div>
+    <p>不審な通信を検知…</p>
+  `;
+
+  setTimeout(showLetter,2500);
+}
+
+function showLetter(){
+  document.body.classList.remove("alert");
+
+  document.getElementById("quiz").innerHTML = `
+    <div class="letter">
+      <h3>📜 招待状</h3>
+      <p>覚悟があるなら挑戦せよ</p>
+      <button onclick="launchExtra()">開封する</button>
+    </div>
+  `;
+}
+
+function loadExtra(){
+  return fetch(extraUrl)
+  .then(res=>res.text())
+  .then(data=>{
+    const rows = parseCSV(data).slice(1);
+
+    const extra = rows.map(c=>({
+      q:c[0],
+      choices:[c[1],c[2],c[3]],
+      answer: normalize(c[4]),
+      explanation:c[5]
+    }));
+
+    return extra[Math.floor(Math.random()*extra.length)];
+  });
+}
+
+function launchExtra(){
+  loadExtra().then(startExtra);
+}
+
+function startExtra(q){
+  extraCurrent=q;
+  timeLeft=30;
+
+  timer=setInterval(()=>{
+    timeLeft--;
+    document.getElementById("timer").innerText=timeLeft;
+
+    if(timeLeft<=0){
+      clearInterval(timer);
+      showFail();
+    }
+  },1000);
+
+  let html=`
+    <h2 style="color:red;">🚨 緊急ミッション 🚨</h2>
+    <div class="timer">残り <span id="timer">30</span> 秒</div>
+    <h3>${q.q}</h3>
+  `;
+
+  ["A","B","C"].forEach((l,i)=>{
+    html+=`<button onclick="answerExtra('${l}')">${q.choices[i]}</button>`;
+  });
+
+  document.getElementById("quiz").innerHTML=html;
+}
+
+function answerExtra(a){
+  clearInterval(timer);
+
+  const q = extraCurrent;
+  const user = normalize(a);
+
+  let html = "";
+
+  if(user === q.answer){
+    html = `<div class="result-box">
+      <h2 style="color:#0f0;">完全勝利</h2>
+      <p>${q.explanation}</p>
+      <button onclick='location.reload()'>もう一度</button>
+    </div>`;
+  }else{
+    html = `<div class="result-box">
+      <h2 style="color:red;">失敗</h2>
+      <p>正解：${q.answer}</p>
+      <p>${q.explanation}</p>
+      <button onclick='location.reload()'>再挑戦</button>
     </div>`;
   }
+
+  document.getElementById("quiz").innerHTML = html;
+}
+
+function showFail(){
+  document.getElementById("quiz").innerHTML =
+  `<div class="result-box">
+    <h2>時間切れ…</h2>
+    <button onclick='location.reload()'>再挑戦</button>
+  </div>`;
 }
 </script>
 
