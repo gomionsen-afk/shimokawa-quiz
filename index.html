@@ -20,12 +20,11 @@ body{
   position:fixed;
   top:10px;
   right:10px;
-  background:#111;
-  border:2px solid #8b0000;
   padding:10px;
   border-radius:10px;
   width:130px;
   z-index:9999;
+  transition:0.5s;
 }
 
 #rankName{
@@ -45,7 +44,7 @@ body{
 .rank-bar{
   height:100%;
   width:0%;
-  background:#aaa;
+  transition:0.3s;
 }
 
 #rankText{
@@ -108,34 +107,13 @@ button{
 
 .timer{ color:red; font-size:22px; }
 
-/* WARNING */
-body.alert{
-  animation: flashBg 0.5s infinite;
+/* ===== エフェクト ===== */
+.glow{
+  animation: glow 1.5s infinite alternate;
 }
-@keyframes flashBg{
-  0%{ background:#200; }
-  50%{ background:#800; }
-  100%{ background:#200; }
-}
-
-.warning{
-  font-size:28px;
-  color:red;
-  animation: blink 0.8s infinite;
-}
-@keyframes blink{
-  0%{opacity:1;}
-  50%{opacity:0;}
-  100%{opacity:1;}
-}
-
-.letter{
-  width:280px;
-  margin:30px auto;
-  padding:20px;
-  background:#fdf5e6;
-  color:#111;
-  border:2px solid #8b0000;
+@keyframes glow{
+  from{ box-shadow:0 0 5px; }
+  to{ box-shadow:0 0 20px; }
 }
 </style>
 </head>
@@ -171,7 +149,7 @@ function getRequiredExp(rank){
   return 9 + rank;
 }
 
-/* ★ランク色 */
+/* 色 */
 function getRankColor(rank){
   if(rank<=5) return "#ffffff";
   if(rank<=15) return "#00ff88";
@@ -183,18 +161,63 @@ function getRankColor(rank){
   return "#ffd700";
 }
 
+/* ★進化スタイル */
+function getRankStyle(rank){
+  if(rank<=5) return {
+    bg:"#111",
+    border:"2px solid #666",
+    shadow:"none"
+  };
+  if(rank<=30) return {
+    bg:"linear-gradient(#112,#000)",
+    border:"2px solid #00ccff",
+    shadow:"0 0 10px #00ccff"
+  };
+  if(rank<=100) return {
+    bg:"linear-gradient(#220022,#000)",
+    border:"2px solid #cc66ff",
+    shadow:"0 0 15px #cc66ff"
+  };
+  if(rank<=200) return {
+    bg:"linear-gradient(#331100,#000)",
+    border:"2px solid #ff4444",
+    shadow:"0 0 20px #ff4444"
+  };
+  return {
+    bg:"linear-gradient(#332200,#000)",
+    border:"3px solid gold",
+    shadow:"0 0 25px gold"
+  };
+}
+
 function updateRankUI(){
   const required = getRequiredExp(playerRank);
 
   const nameEl = document.getElementById("rankName");
+  const ui = document.getElementById("rankUI");
+  const bar = document.getElementById("rankBar");
+
   nameEl.innerText = "RANK " + playerRank;
-  nameEl.style.color = getRankColor(playerRank); // ←ここが追加！
+  nameEl.style.color = getRankColor(playerRank);
 
   document.getElementById("rankText").innerText =
     currentExp + " / " + required;
 
-  document.getElementById("rankBar").style.width =
-    (currentExp / required) * 100 + "%";
+  bar.style.width = (currentExp / required) * 100 + "%";
+  bar.style.background = getRankColor(playerRank);
+
+  /* スタイル適用 */
+  const style = getRankStyle(playerRank);
+  ui.style.background = style.bg;
+  ui.style.border = style.border;
+  ui.style.boxShadow = style.shadow;
+
+  /* 最上位だけ発光 */
+  if(playerRank >= 201){
+    ui.classList.add("glow");
+  }else{
+    ui.classList.remove("glow");
+  }
 }
 
 function addExp(){
@@ -218,7 +241,7 @@ function addExp(){
   updateRankUI();
 }
 
-/* ===== クイズ ===== */
+/* ===== クイズ（そのまま） ===== */
 let questions = [];
 let current = 0;
 let score = 0;
@@ -320,111 +343,7 @@ function next(){
       <p>${score} / 10 問正解！</p>
       <div class="rank">${rank}</div>
     </div>`;
-
-    if(score === 10){
-      setTimeout(startWarning,3000);
-    }
   }
-}
-
-/* ===== エクストラ ===== */
-let extraCurrent;
-let timer;
-let timeLeft = 30;
-
-function startWarning(){
-  document.body.classList.add("alert");
-  document.getElementById("quiz").innerHTML =
-    `<div class="warning">⚠ WARNING ⚠</div>`;
-  setTimeout(showLetter,2500);
-}
-
-function showLetter(){
-  document.body.classList.remove("alert");
-  document.getElementById("quiz").innerHTML =
-    `<div class="letter">
-      <h3>📜 招待状</h3>
-      <button onclick="launchExtra()">開封する</button>
-    </div>`;
-}
-
-function loadExtra(){
-  return fetch(extraUrl)
-  .then(res=>res.text())
-  .then(data=>{
-    const rows = parseCSV(data).slice(1);
-    const extra = rows.filter(c=>c[0]&&c[4]).map(c=>({
-      q:c[0],
-      choices:[c[1],c[2],c[3]],
-      answer: normalize(c[4]),
-      explanation:c[5]
-    }));
-    return extra[Math.floor(Math.random()*extra.length)];
-  });
-}
-
-function launchExtra(){
-  loadExtra().then(startExtra);
-}
-
-function startExtra(q){
-  extraCurrent=q;
-  timeLeft=30;
-
-  clearInterval(timer);
-  timer=setInterval(()=>{
-    timeLeft--;
-    document.getElementById("timer").innerText=timeLeft;
-    if(timeLeft<=0){
-      clearInterval(timer);
-      showFail();
-    }
-  },1000);
-
-  let html=`
-    <h2 style="color:red;">🚨 緊急ミッション 🚨</h2>
-    <div class="timer">残り <span id="timer">30</span> 秒</div>
-    <h3>${q.q}</h3>
-  `;
-
-  ["A","B","C"].forEach((l,i)=>{
-    html+=`<button onclick="answerExtra('${l}')">${q.choices[i]}</button>`;
-  });
-
-  document.getElementById("quiz").innerHTML=html;
-}
-
-function answerExtra(a){
-  clearInterval(timer);
-  const q = extraCurrent;
-  const user = normalize(a);
-
-  let html = "";
-
-  if(user === q.answer){
-    html = `<div class="result-box">
-      <h2 style="color:#0f0;">完全勝利</h2>
-      <p>${q.explanation}</p>
-      <button onclick='location.reload()'>もう一度</button>
-    </div>`;
-  }else{
-    html = `<div class="result-box">
-      <h2 style="color:red;">失敗</h2>
-      <p>正解：${q.answer}</p>
-      <p>${q.explanation}</p>
-      <button onclick='location.reload()'>再挑戦</button>
-    </div>`;
-  }
-
-  document.getElementById("quiz").innerHTML = html;
-}
-
-function showFail(){
-  document.getElementById("quiz").innerHTML =
-  `<div class="result-box">
-    <h2>時間切れ…</h2>
-    <button onclick='location.reload()'>再挑戦</button>
-  </div>`;
 }
 </script>
 
