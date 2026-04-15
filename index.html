@@ -83,29 +83,35 @@ button{
   border:none;
 }
 
+/* 選択肢 */
 .choice{ padding:10px; margin:5px; }
 .correct{ background:#8b0000; color:#fff; }
 .wrong{ background:#777; color:#fff; }
 
+/* 解説（白文字） */
 .explanation-box{
   margin-top:15px;
   padding:12px;
-  background:#222;
-  border-left:5px solid #8b0000;
+  background:#111;
+  color:#fff;
+  border-left:5px solid #ff4444;
   text-align:left;
+  line-height:1.6;
 }
 
+/* 結果（白文字） */
 .result-box{
   padding:20px;
   border:3px solid #8b0000;
   background:#111;
+  color:#fff;
 }
 
 .rank{ font-size:24px; color:#ff4444; }
 
 .timer{ color:red; font-size:22px; }
 
-/* WARNING演出 */
+/* WARNING */
 body.alert{
   animation: flashBg 0.5s infinite;
 }
@@ -126,6 +132,7 @@ body.alert{
   100%{opacity:1;}
 }
 
+/* 手紙 */
 .letter{
   width:280px;
   margin:30px auto;
@@ -178,11 +185,14 @@ let current = 0;
 let score = 0;
 
 function parseCSV(text){
-  return text.split("\n").map(r=>r.split(","));
+  return text.trim().split("\n").map(r=>r.split(","));
 }
 
 function normalize(str){
-  return (str||"").trim().toUpperCase();
+  return (str || "")
+    .trim()
+    .replace(/[Ａ-Ｚ]/g, s => String.fromCharCode(s.charCodeAt(0)-65248))
+    .toUpperCase();
 }
 
 fetch(url)
@@ -191,7 +201,7 @@ fetch(url)
   const rows = parseCSV(data).slice(1);
 
   questions = rows
-    .filter(c => c[0] && c[4])
+    .filter(c => c.length>=5 && c[0] && c[4])
     .map(c=>({
       q:c[0],
       choices:[c[1],c[2],c[3]],
@@ -223,7 +233,7 @@ function showQuestion(){
   document.getElementById("quiz").innerHTML = html;
 }
 
-/* ===== 回答 ===== */
+/* 回答 */
 function answer(a){
   const q = questions[current];
   const user = normalize(a);
@@ -256,7 +266,7 @@ function answer(a){
   document.getElementById("quiz").innerHTML = html;
 }
 
-/* ===== 次へ ===== */
+/* 次へ */
 function next(){
   current++;
 
@@ -268,7 +278,8 @@ function next(){
     if(score===10) rank="名探偵";
     else if(score>=8) rank="まあ探偵";
     else if(score>=5) rank="眠りの小五郎";
-    else rank="修行不足";
+    else if(score>=3) rank="修行中";
+    else rank="気にしないで";
 
     document.getElementById("quiz").innerHTML =
     `<div class="result-box">
@@ -277,7 +288,6 @@ function next(){
       <div class="rank">${rank}</div>
     </div>`;
 
-    /* ★満点でエクストラ */
     if(score === 10){
       setTimeout(startWarning,3000);
     }
@@ -306,7 +316,6 @@ function showLetter(){
   document.getElementById("quiz").innerHTML = `
     <div class="letter">
       <h3>📜 招待状</h3>
-      <p>覚悟があるなら挑戦せよ</p>
       <button onclick="launchExtra()">開封する</button>
     </div>
   `;
@@ -317,8 +326,7 @@ function loadExtra(){
   .then(res=>res.text())
   .then(data=>{
     const rows = parseCSV(data).slice(1);
-
-    const extra = rows.map(c=>({
+    const extra = rows.filter(c=>c[0]&&c[4]).map(c=>({
       q:c[0],
       choices:[c[1],c[2],c[3]],
       answer: normalize(c[4]),
@@ -337,6 +345,7 @@ function startExtra(q){
   extraCurrent=q;
   timeLeft=30;
 
+  clearInterval(timer);
   timer=setInterval(()=>{
     timeLeft--;
     document.getElementById("timer").innerText=timeLeft;
