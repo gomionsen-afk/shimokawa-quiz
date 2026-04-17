@@ -99,17 +99,11 @@ button{
   border:none;
 }
 
-.choice{ padding:10px; margin:5px; }
-.correct{ background:#8b0000; color:#fff; }
-.wrong{ background:#777; color:#fff; }
-
 .explanation-box{
   margin-top:15px;
   padding:12px;
   background:#111;
   color:#fff;
-  border-left:5px solid #ff4444;
-  text-align:left;
 }
 
 .result-box{
@@ -121,7 +115,6 @@ button{
 
 .timer{ color:red; font-size:22px; }
 
-/* WARNING */
 body.alert{
   animation: flashBg 0.5s infinite;
 }
@@ -148,7 +141,6 @@ body.alert{
   padding:20px;
   background:#fdf5e6;
   color:#111;
-  border:2px solid #8b0000;
 }
 </style>
 </head>
@@ -175,29 +167,12 @@ body.alert{
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=0&single=true&output=csv";
 const extraUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSyDLHheyjmdZN-QobmpCdoquNfG4H1_7dzne9zSUbLqWxz13w9Dsnao3J9D6zMOtDRUiBfxROuCCBy/pub?gid=1390184656&single=true&output=csv";
 
-/* ===== スキン定義 ===== */
+/* ===== スキン ===== */
 const skins = [
   {name:"赤オーラ", class:"skin-red"},
   {name:"ダーク", class:"skin-dark"},
   {name:"ゴールド", class:"skin-gold"}
 ];
-
-/* ===== ランク ===== */
-let playerRank = Number(localStorage.getItem("playerRank") || 1);
-let currentExp = Number(localStorage.getItem("currentExp") || 0);
-
-function getRequiredExp(rank){ return 9 + rank; }
-
-function getRankColor(rank){
-  if(rank<=5) return "#fff";
-  if(rank<=15) return "#00ff88";
-  if(rank<=30) return "#00ccff";
-  if(rank<=50) return "#cc66ff";
-  if(rank<=100) return "#ffff00";
-  if(rank<=150) return "#ff8800";
-  if(rank<=200) return "#ff0000";
-  return "gold";
-}
 
 function applySavedSkin(){
   const saved = localStorage.getItem("rankSkin");
@@ -206,27 +181,17 @@ function applySavedSkin(){
   }
 }
 
+/* ===== ランク ===== */
+let playerRank = Number(localStorage.getItem("playerRank") || 1);
+let currentExp = Number(localStorage.getItem("currentExp") || 0);
+
+function getRequiredExp(rank){ return 9 + rank; }
+
 function updateRankUI(){
   const required = getRequiredExp(playerRank);
-  const ui = document.getElementById("rankUI");
-
-  ui.className = "";
-  ui.id = "rankUI";
-
-  if(playerRank>=201) ui.classList.add("rank-201");
-  else if(playerRank>=151) ui.classList.add("rank-151");
-  else if(playerRank>=101) ui.classList.add("rank-101");
-  else if(playerRank>=51) ui.classList.add("rank-51");
-  else if(playerRank>=31) ui.classList.add("rank-31");
-  else if(playerRank>=16) ui.classList.add("rank-16");
-  else if(playerRank>=6) ui.classList.add("rank-6");
-  else ui.classList.add("rank-1");
-
   applySavedSkin();
 
   document.getElementById("rankName").innerText = "RANK " + playerRank;
-  document.getElementById("rankName").style.color = getRankColor(playerRank);
-
   document.getElementById("rankText").innerText =
     currentExp + " / " + required;
 
@@ -250,7 +215,7 @@ function addExp(amount=1){
   updateRankUI();
 }
 
-/* ===== クイズ（省略なし安定） ===== */
+/* ===== クイズ ===== */
 let questions = [];
 let current = 0;
 let score = 0;
@@ -333,6 +298,53 @@ function next(){
 /* ===== エクストラ ===== */
 let extraCurrent;
 
+function startWarning(){
+  document.body.classList.add("alert");
+  document.getElementById("quiz").innerHTML =
+    `<div class="warning">⚠ WARNING ⚠</div>`;
+  setTimeout(showLetter,2500);
+}
+
+function showLetter(){
+  document.body.classList.remove("alert");
+  document.getElementById("quiz").innerHTML =
+    `<div class="letter">
+      <h3>📜 招待状</h3>
+      <button onclick="launchExtra()">開封する</button>
+    </div>`;
+}
+
+function loadExtra(){
+  return fetch(extraUrl)
+  .then(res=>res.text())
+  .then(data=>{
+    const rows = parseCSV(data).slice(1);
+    const extra = rows.filter(c=>c[0]&&c[4]).map(c=>({
+      q:c[0],
+      choices:[c[1],c[2],c[3]],
+      answer: normalize(c[4]),
+      explanation:c[5]||""
+    }));
+
+    return extra[Math.floor(Math.random()*extra.length)];
+  });
+}
+
+function launchExtra(){
+  loadExtra().then(startExtra);
+}
+
+function startExtra(q){
+  extraCurrent=q;
+
+  let html=`<h2>🚨 緊急ミッション 🚨</h2><h3>${q.q}</h3>`;
+  ["A","B","C"].forEach((l,i)=>{
+    html+=`<button onclick="answerExtra('${l}')">${q.choices[i]}</button>`;
+  });
+
+  document.getElementById("quiz").innerHTML=html;
+}
+
 function answerExtra(a){
   const q = extraCurrent;
   const user = normalize(a);
@@ -345,9 +357,9 @@ function answerExtra(a){
     document.getElementById("quiz").innerHTML =
     `<div class="result-box">
       <h2 style="color:#0f0;">完全勝利</h2>
-      <p>🎁 報酬：${reward.name}</p>
-      <button onclick="applySkin('${reward.class}')">② 背景変更する</button>
-      <button onclick="location.reload()">① 変更しない</button>
+      <p>🎁 ${reward.name}</p>
+      <button onclick="applySkin('${reward.class}')">背景変更する</button>
+      <button onclick="location.reload()">変更しない</button>
     </div>`;
   }else{
     document.getElementById("quiz").innerHTML =
@@ -358,8 +370,8 @@ function answerExtra(a){
   }
 }
 
-function applySkin(skinClass){
-  localStorage.setItem("rankSkin", skinClass);
+function applySkin(skin){
+  localStorage.setItem("rankSkin", skin);
   location.reload();
 }
 </script>
