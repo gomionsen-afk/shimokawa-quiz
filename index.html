@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字RPG - 零 - デバッグモード（オーラ別属性発光完全版）</title>
+    <title>漢字RPG - 零 - 完全版（エコノミー調整）</title>
     <style>
         /* 画面全体の縦固定を解除し、自然なスクロールを許可 */
         body { background: #000; color: #fff; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 10px 0; box-sizing: border-box; }
@@ -117,9 +117,9 @@
     </div>
 
     <div class="global-info">
-        <span>金: <span id="global-coin-count">∞</span></span>
+        <span>金: <span id="global-coin-count">0</span>枚</span>
         <div>
-            <span id="header-stage-label">拠点(TEST MODE)</span>
+            <span id="header-stage-label">拠点</span>
             <button id="btn-retreat" class="exit-btn" style="display:none; margin-left:10px;" onclick="location.reload()">拠点に戻る</button>
         </div>
     </div>
@@ -138,9 +138,9 @@
         <div id="seed-box" class="box-list" style="max-height: 130px; overflow-y: auto;"></div>
 
         <div class="controls" style="grid-template-columns: repeat(5, 1fr); height: 50px; margin-top: 10px; gap: 4px;">
-            <button class="gacha-btn" onclick="playGacha(1)">単発<span>(無料)</span></button>
-            <button class="gacha-btn" onclick="playGacha(10)">10連<span>(★3確)</span></button>
-            <button class="aura-btn" onclick="playAuraGacha()">霊気<span>(無料)</span></button>
+            <button class="gacha-btn" onclick="playGacha(1)">単発<span>(10枚)</span></button>
+            <button class="gacha-btn" onclick="playGacha(10)">10連<span>(100枚)</span></button>
+            <button class="aura-btn" onclick="playAuraGacha()">霊気<span>(30枚)</span></button>
             <button class="boss-btn" onclick="openBossSelection()">強者</button>
             <button id="btn-start" onclick="startGame()">出撃</button>
         </div>
@@ -159,10 +159,10 @@
         <div id="current-aura-zone"></div>
 
         <div class="buy-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-            <button class="buy-btn" onclick="buyStat('p')">攻撃+1<span>(FREE)</span></button>
-            <button class="buy-btn" onclick="buyStat('h')">HP+1<span>(FREE)</span></button>
-            <button class="buy-btn" onclick="buyStat('s')">速さ+1<span>(FREE)</span></button>
-            <button class="buy-btn" onclick="buyStat('m')">MP+1<span>(FREE)</span></button>
+            <button class="buy-btn" onclick="buyStat('p', 300)">攻撃+1<span>(300枚)</span></button>
+            <button class="buy-btn" onclick="buyStat('h', 300)">HP+1<span>(300枚)</span></button>
+            <button class="buy-btn" onclick="buyStat('s', 500)">速さ+1<span>(500枚)</span></button>
+            <button class="buy-btn" onclick="buyStat('m', 800)">MP+1<span>(800枚)</span></button>
         </div>
         
         <div class="section-title" id="shop-sub-title">【装備可能なオーラ一覧】</div>
@@ -191,7 +191,7 @@ const charData = [
     { name: '蛾', r: 1, p: 1, h: 3, m: 1, s: 2, skill: "鱗粉", cost: 1 }, { name: '犬', r: 2, p: 3, h: 6, m: 0, s: 4 },
     { name: '蜘蛛', r: 2, p: 4, h: 3, m: 1, s: 1, skill: "地獄の糸", cost: 1 }, { name: '梟', r: 2, p: 3, h: 5, m: 5, s: 5, skill: "賢者の知恵", cost: 2 },
     { name: '鮫', r: 4, p: 5, h: 7, m: 0, s: 5 }, { name: '蟋蟀', r: 2, p: 3, h: 2, m: 3, s: 3, skill: "レクイエム", cost: 3 },
-    { name: '龍', r: 5, p: 12, h: 30, m: 10, s: 5, skill: "咆哮", cost: 5 }, { name: '鳳', r: 5, p: 8, h: 20, m: 20, s: 15, skill: "転生", cost: 10 },
+    { name: '龍', r: 5, p: 12, h: 30, m: 10, s: 5, skill: "咆咆", cost: 5 }, { name: '鳳', r: 5, p: 8, h: 20, m: 20, s: 15, skill: "転生", cost: 10 },
     { name: '鼠', r: 1, p: 2, h: 2, m: 0, s: 2 }, { name: '蜥蜴', r: 2, p: 1, h: 2, m: 4, s: 4, skill: "身代わり", cost: 2 },
     { name: '甲虫', r: 2, p: 3, h: 4, m: 0, s: 1 }, { name: '熊', r: 4, p: 7, h: 10, m: 0, s: 3 },
     { name: '蛆', r: 1, p: 0, h: 1, m: 0, s: 1, skill: "再生", cost: 0, special: true },
@@ -219,7 +219,7 @@ const stageBaseData = [
 ];
 const bossListData = ['雷鰻', '王蛇'];
 
-let coins = 999999, box = [], selectedIds = [], seeds = [], auras = [], isFreeGachaAvailable = true, shopTargetId = null;
+let coins = 0, box = [], selectedIds = [], seeds = [], auras = [], isFreeGachaAvailable = true, shopTargetId = null;
 let isBossMode = false, currentBossName = null;
 
 function saveData() { localStorage.setItem('kanji_rpg_AURA_TYPE_GLOW', JSON.stringify({ coins, box, selectedIds, seeds, auras, isFreeGachaAvailable })); }
@@ -228,7 +228,7 @@ function loadData() {
     if (saved) {
         const d = JSON.parse(saved);
         box = (d.box || []).filter(c => c && c.name);
-        coins = 999999;
+        coins = d.coins || 0; // セーブデータから正常にコインをロード
         selectedIds = (d.selectedIds || []).filter(sid => box.some(b => b.id === sid));
         seeds = d.seeds || [];
         auras = d.auras || [];
@@ -238,7 +238,7 @@ function loadData() {
 }
 
 function updateHomeUI() {
-    document.getElementById('global-coin-count').innerText = "∞";
+    document.getElementById('global-coin-count').innerText = coins;
     
     document.getElementById('my-box').innerHTML = box.map(c => {
         let auraBadge = "";
@@ -314,6 +314,15 @@ function toggleSelect(id) {
 }
 
 function playGacha(times) {
+    const cost = times === 10 ? 100 : 10;
+    if (coins < cost) {
+        alert(`コインが不足しています！（必要コイン: ${cost}枚 / 所持コイン: ${coins}枚）`);
+        return;
+    }
+    
+    coins -= cost;
+    document.getElementById('global-coin-count').innerText = coins;
+
     const overlay = document.getElementById('gacha-overlay');
     const display = document.getElementById('gacha-kanji-display');
     const resultName = document.getElementById('gacha-result-name');
@@ -380,6 +389,15 @@ function playGacha(times) {
 }
 
 function playAuraGacha() {
+    const cost = 30;
+    if (coins < cost) {
+        alert(`コインが不足しています！（必要コイン: ${cost}枚 / 所持コイン: ${coins}枚）`);
+        return;
+    }
+
+    coins -= cost;
+    document.getElementById('global-coin-count').innerText = coins;
+
     const overlay = document.getElementById('gacha-overlay');
     const display = document.getElementById('gacha-kanji-display');
     const resultName = document.getElementById('gacha-result-name');
@@ -530,8 +548,15 @@ function extractSkill() {
     }
 }
 
-function buyStat(s) {
-    box.find(b => b.id === shopTargetId)[s]++; updateShopUI(); saveData();
+function buyStat(s, cost) {
+    if (coins < cost) {
+        alert(`コインが不足しています！（必要コイン: ${cost}枚 / 所持コイン: ${coins}枚）`);
+        return;
+    }
+    coins -= cost;
+    box.find(b => b.id === shopTargetId)[s]++; 
+    updateShopUI(); 
+    saveData();
 }
 
 let party = [], enemies = [], stage = 1, queue = [], qIdx = 0, isSelecting = false, currentAction = null;
@@ -686,8 +711,8 @@ function executeAction(u, t, type) {
         let dmg = u.p;
         let isCrit = false;
         if (u.aura && u.aura.type === '会心') {
-            const critChance = u.aura.value;
-            if (Math.random() * 100 < critChance) {
+            const SchuylerChance = u.aura.value;
+            if (Math.random() * 100 < SchuylerChance) {
                 dmg = dmg * 2;
                 isCrit = true;
             }
@@ -722,6 +747,7 @@ function next() {
     if (enemies.every(e => e.curH <= 0)) { 
         party.forEach(p => { p.curH = p.maxH; p.curM = p.m; p.poison = false; p.charm = 0; p.guard = false; });
         addLog("勝利！全員全回復した");
+        
         if (isBossMode) {
             addLog("強者を退けた！");
             if (Math.random() < 0.05) {
@@ -731,7 +757,25 @@ function next() {
             }
             saveData(); setTimeout(()=>location.reload(), 1500);
         } else {
-            addLog("勝利！"); saveData(); stage++; setTimeout(initBattle, 800);
+            // バトル報酬（段階別調整）
+            let reward = 1;
+            if (stage >= 1 && stage <= 10) reward = 1;
+            else if (stage >= 11 && stage <= 20) reward = 2;
+            else if (stage >= 21 && stage <= 30) reward = 3;
+            else if (stage >= 31 && stage <= 50) reward = 4;
+            else if (stage >= 51) reward = 5;
+
+            coins += reward;
+            
+            // 獲得したコインを即座にUI表示へ反映
+            const coinCountEl = document.getElementById('global-coin-count');
+            if (coinCountEl) {
+                coinCountEl.innerText = coins;
+            }
+
+            addLog(`勝利報酬としてコインを ${reward} 枚獲得！`);
+            
+            saveData(); stage++; setTimeout(initBattle, 800);
         }
         return; 
     }
@@ -767,7 +811,7 @@ function updateUI() {
         
         return `<div class="${classes}" onclick="onUnitClick(${u.id})">
             <span class="${kanjiClass}" style="${overrideColor}">${u.name}</span>
-            <div class="hp-bar-bg"><div class="hp-bar-fill" style="width:${(u.curH/u.maxH)*100}%"></div></div>
+            <div class="hp-bar-bg"><div class="hp-bar-fill" style="width:${(u.curH/u.maxH)*100}%\"></div></div>
             <div class="stats-text">H:${u.curH} P:${u.p}</div>
         </div>`;
     };
@@ -776,11 +820,14 @@ function updateUI() {
 }
 function addLog(m) { const l = document.getElementById('log'); l.innerText += m + "\n"; l.scrollTop = l.scrollHeight; }
 
+// データのロード
 if (!loadData()) { 
     ['蟻','蝿','蛆'].forEach(n => { 
         const b = charData.find(c => c.name === n); if(b) box.push({...b, id: Math.random(), auraId: null}); 
-    }); saveData(); 
+    });
+    saveData();
 }
+
 updateHomeUI();
 </script>
 </body>
