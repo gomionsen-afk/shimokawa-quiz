@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字RPG - 零 - 完全版（エコノミー調整）</title>
+    <title>漢字RPG - 零 - 完全版（エコノミー調整・装具対応）</title>
     <style>
         /* 画面全体の縦固定を解除し、自然なスクロールを許可 */
         body { background: #000; color: #fff; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 10px 0; box-sizing: border-box; }
@@ -21,7 +21,7 @@
         
         /* リストエリアが見やすくなるよう高さを少し調整 */
         .box-list { border: 1px solid #333; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 5px; background: #050505; align-content: start; }
-        .box-item { border: 1px solid #555; text-align: center; cursor: pointer; font-size: 20px; position: relative; height: 60px; display: flex; align-items: center; justify-content: center; background: #111; }
+        .box-item { border: 1px solid #555; text-align: center; cursor: pointer; font-size: 20px; position: relative; height: 60px; display: flex; align-items: center; justify-content: center; background: #111; user-select: none; }
         .box-item.selected { border-color: #0f0; background: #030; box-shadow: inset 0 0 5px #0f0; }
         .box-item .rarity { font-size: 8px; position: absolute; top: 2px; left: 2px; color: #ff0; }
         .box-item .shop-hint { font-size: 7px; position: absolute; bottom: 2px; right: 2px; color: #0aa; border: 1px solid #044; padding: 0 1px; }
@@ -46,6 +46,7 @@
         .gacha-btn { background: #202; border-color: #a0a; font-size: 11px; line-height: 1.2; }
         .gacha-btn span { display: block; font-size: 8px; color: #d0d; }
         .boss-btn { background: #300; border-color: #f00; }
+        .dig-btn { background: #220; border-color: #aa0; color: #ff0; } /* 発掘ボタン用スタイル */
         .exit-btn { background: #222; color: #fff; border: 1px solid #666; font-size: 10px; padding: 2px 8px; height: 24px; cursor: pointer; border-radius: 3px; }
         .buy-btn span { font-size: 9px; color: #ff0; margin-left: 4px; }
 
@@ -69,12 +70,19 @@
         .aura-item .aura-effect { font-size: 8px; color: #aaa; margin-top: 2px; }
         
         .equipped-badge { font-size: 7px; position: absolute; bottom: 2px; left: 2px; color: #f0f; border: 1px solid #f0f; padding: 0 1px; background: #202; }
+        .weapon-badge { font-size: 7px; position: absolute; bottom: 2px; right: 2px; color: #fff; border: 1px solid #aaa; padding: 0 1px; background: #333; }
         .current-aura-display { border: 1px dashed #0aa; background: #011; padding: 6px; margin: 5px 0; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
 
         .seed-box-item { font-size: 10px !important; border-color: #050 !important; color: #0f0; background: #010; flex-direction: column; transition: 0.2s; }
         .seed-box-item:hover { background: #020; border-color: #0a0 !important; }
         .seed-box-title { font-size: 13px; font-weight: bold; }
         .seed-box-cost { font-size: 8px; color: #8c8; margin-top: 1px; }
+
+        /* 武器アイテム用スタイル */
+        .weapon-box-item { font-size: 10px !important; border-color: #777 !important; color: #ddd; background: #222; flex-direction: column; transition: 0.2s; }
+        .weapon-box-item:hover { background: #333; border-color: #fff !important; }
+        .weapon-box-title { font-size: 12px; font-weight: bold; color: #fff; }
+        .weapon-box-effect { font-size: 8px; color: #aaa; margin-top: 1px; }
 
         .glow-回避 { animation: pulse-blue 2s infinite ease-in-out; }
         @keyframes pulse-blue {
@@ -103,6 +111,11 @@
             50% { color: #ffffff; text-shadow: 0 0 20px rgba(60, 255, 160, 1), 0 0 32px rgba(0, 200, 100, 0.8); }
             100% { color: #d0ffd0; text-shadow: 0 0 6px rgba(0, 255, 128, 0.7), 0 0 12px rgba(0, 255, 128, 0.4); }
         }
+
+        /* 売却システム用のボタンスタイル */
+        .sell-btn-area { display: flex; justify-content: flex-end; margin-top: 3px; margin-bottom: 5px; }
+        .sell-action-btn { background: #200; border: 1px solid #f33; color: #f99; font-size: 10px; padding: 2px 8px; cursor: pointer; border-radius: 3px; }
+        .sell-action-btn:disabled { border-color: #333; color: #555; background: #000; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -126,10 +139,13 @@
 
     <div id="view-home" class="view active">
         <h2>深淵の拠点</h2>
-        <div class="guide-text">※キャラを選択して種を押すとスキル付与！</div>
+        <div class="guide-text">※キャラを選択して種や装具を押すと付与・装備！</div>
         
         <div class="section-title">【仲間の漢字】</div>
         <div id="my-box" class="box-list" style="max-height: 180px; overflow-y: auto;"></div>
+        <div class="sell-btn-area">
+            <button id="btn-sell-unit" class="sell-action-btn" onclick="sellSelectedUnit()" disabled>選択した漢字を売却（別れの儀）</button>
+        </div>
         
         <div class="section-title">【所持オーラ】</div>
         <div id="aura-box" class="box-list" style="max-height: 130px; overflow-y: auto;"></div>
@@ -137,12 +153,15 @@
         <div class="section-title">【抽出したスキルの種】</div>
         <div id="seed-box" class="box-list" style="max-height: 130px; overflow-y: auto;"></div>
 
-        <div class="controls" style="grid-template-columns: repeat(5, 1fr); height: 50px; margin-top: 10px; gap: 4px;">
+        <div class="section-title">【所持している装具（武器）】</div>
+        <div id="weapon-box" class="box-list" style="max-height: 130px; overflow-y: auto;"></div>
+
+        <div class="controls" style="grid-template-columns: repeat(6, 1fr); height: 50px; margin-top: 10px; gap: 4px;">
             <button class="gacha-btn" onclick="playGacha(1)">単発<span>(10枚)</span></button>
             <button class="gacha-btn" onclick="playGacha(10)">10連<span>(100枚)</span></button>
             <button class="aura-btn" onclick="playAuraGacha()">霊気<span>(30枚)</span></button>
             <button class="boss-btn" onclick="openBossSelection()">強者</button>
-            <button id="btn-start" onclick="startGame()">出撃</button>
+            <button class="dig-btn" onclick="startDigMode()">発掘</button> <button id="btn-start" onclick="startGame()">出撃</button>
         </div>
     </div>
 
@@ -219,10 +238,11 @@ const stageBaseData = [
 ];
 const bossListData = ['雷鰻', '王蛇'];
 
-let coins = 0, box = [], selectedIds = [], seeds = [], auras = [], isFreeGachaAvailable = true, shopTargetId = null;
+let coins = 0, box = [], selectedIds = [], seeds = [], auras = [], weapons = [], isFreeGachaAvailable = true, shopTargetId = null;
 let isBossMode = false, currentBossName = null;
+let isDigMode = false; // 発掘モード判定フラグ
 
-function saveData() { localStorage.setItem('kanji_rpg_AURA_TYPE_GLOW', JSON.stringify({ coins, box, selectedIds, seeds, auras, isFreeGachaAvailable })); }
+function saveData() { localStorage.setItem('kanji_rpg_AURA_TYPE_GLOW', JSON.stringify({ coins, box, selectedIds, seeds, auras, weapons, isFreeGachaAvailable })); }
 function loadData() {
     const saved = localStorage.getItem('kanji_rpg_AURA_TYPE_GLOW');
     if (saved) {
@@ -232,6 +252,7 @@ function loadData() {
         selectedIds = (d.selectedIds || []).filter(sid => box.some(b => b.id === sid));
         seeds = d.seeds || [];
         auras = d.auras || [];
+        weapons = d.weapons || []; // 武器データのロード
         isFreeGachaAvailable = true;
         return true;
     } return false;
@@ -246,10 +267,16 @@ function updateHomeUI() {
             const au = auras.find(a => a.id === c.auraId);
             if (au) auraBadge = `<span class="equipped-badge">${au.type}</span>`;
         }
+        let weaponBadge = "";
+        if (c.weaponId) {
+            const wp = weapons.find(w => w.id === c.weaponId);
+            if (wp) weaponBadge = `<span class="weapon-badge">剣</span>`;
+        }
         return `<div class="box-item ${selectedIds.includes(c.id)?'selected':''}" onclick="toggleSelect(${c.id})" ondblclick="openShop(${c.id})">
             <span class="rarity">${'★'.repeat(c.r || 1)}</span>
             ${c.name}
             ${auraBadge}
+            ${weaponBadge}
             <span class="shop-hint">修練</span>
         </div>`;
     }).join('');
@@ -277,7 +304,63 @@ function updateHomeUI() {
         }).join('');
     }
 
+    // 武器ボックスのUI更新
+    const weaponBox = document.getElementById('weapon-box');
+    if (weapons.length === 0) {
+        weaponBox.innerHTML = `<div style="grid-column: span 4; color: #555; text-align: center; font-size: 11px; padding-top: 15px;">装具はありません</div>`;
+    } else {
+        weaponBox.innerHTML = weapons.map((w, i) => {
+            const owner = box.find(b => b.weaponId === w.id);
+            const ownerText = owner ? `<div style="font-size:7px; color:#f0f; margin-top:1px;">装備:${owner.name}</div>` : `<div style="font-size:7px; color:#0f0; margin-top:1px;">未装備</div>`;
+            return `<div class="box-item weapon-box-item" style="opacity: ${owner ? 0.6 : 1}" onclick="equipWeaponFromHome(${i})">
+                <div class="weapon-box-title">${w.name}</div>
+                <div class="weapon-box-effect">攻撃+2</div>
+                ${ownerText}
+            </div>`;
+        }).join('');
+    }
+
     document.getElementById('btn-start').disabled = !selectedIds.length;
+    
+    // 売却ボタンの活性/非活性の制御 (選択されているキャラが1つ以上ある場合のみ活性化)
+    document.getElementById('btn-sell-unit').disabled = selectedIds.length === 0;
+}
+
+// キャラクター売却処理
+function sellSelectedUnit() {
+    if (selectedIds.length === 0) return;
+    
+    const targetId = selectedIds[selectedIds.length - 1];
+    const char = box.find(b => b.id === targetId);
+    
+    if (!char) return;
+    
+    if (box.length <= 1) {
+        alert("最後の1体は売却（お別れ）できません。");
+        return;
+    }
+    
+    let rewardCoin = 1;
+    if (char.r === 2) rewardCoin = 2;
+    else if (char.r === 3) rewardCoin = 3;
+    else if (char.r === 4) rewardCoin = 5;
+    else if (char.r === 5) rewardCoin = 8;
+    else if (char.r === 6) rewardCoin = 15;
+    
+    if (confirm(`選択中の「${char.name} (★${char.r})」と別れの儀を行いますか？\n（取得コイン: ${rewardCoin}枚）\n※装着中のオーラ・装具は手元に戻ります。`)) {
+        coins += rewardCoin;
+        
+        // 売却されるキャラの装備を外す
+        char.auraId = null;
+        char.weaponId = null;
+
+        box = box.filter(b => b.id !== targetId);
+        selectedIds = selectedIds.filter(sid => sid !== targetId);
+        
+        saveData();
+        updateHomeUI();
+        alert(`${char.name} とお別れし、コインを ${rewardCoin} 枚獲得しました。`);
+    }
 }
 
 function attachSeedFromHome(seedIndex) {
@@ -305,6 +388,39 @@ function attachSeedFromHome(seedIndex) {
         saveData();
         updateHomeUI();
     }
+}
+
+// 武器の装備・付け替え処理
+function equipWeaponFromHome(weaponIndex) {
+    if (selectedIds.length === 0) {
+        alert("武器を装備させる漢字を上のリストから選択（クリックして緑枠に）してください。");
+        return;
+    }
+
+    const targetId = selectedIds[selectedIds.length - 1];
+    const char = box.find(b => b.id === targetId);
+    const weapon = weapons[weaponIndex];
+
+    if (!char || !weapon) return;
+
+    // すでに他のキャラが装備しているなら、そのキャラから外す
+    const currentOwner = box.find(b => b.weaponId === weapon.id);
+    if (currentOwner) {
+        currentOwner.weaponId = null;
+    }
+
+    // もし選択キャラが既に別の武器（同種含む）を持っていたら上書き（元のは未装備になるだけ）
+    if (char.weaponId === weapon.id) {
+        // 同じ武器をクリックした場合は「外す」処理にする
+        char.weaponId = null;
+        alert(`${char.name} の装具を外しました。`);
+    } else {
+        char.weaponId = weapon.id;
+        alert(`${char.name} に 【${weapon.name}】 を装備しました！（攻撃力+2）`);
+    }
+
+    saveData();
+    updateHomeUI();
 }
 
 function toggleSelect(id) {
@@ -363,7 +479,7 @@ function playGacha(times) {
                     pool = charData.filter(c => c.r >= 3);
                 }
                 const base = pool[Math.floor(Math.random() * pool.length)];
-                const newUnit = {...base, id: Math.random(), auraId: null};
+                const newUnit = {...base, id: Math.random(), auraId: null, weaponId: null};
                 
                 box.push(newUnit);
                 results.push(newUnit);
@@ -474,6 +590,37 @@ function openBossSelection() {
 }
 function closeBossSelection() { document.getElementById('view-boss-select').classList.remove('active'); document.getElementById('view-home').classList.add('active'); }
 
+/* 発掘モード開始処理 */
+function startDigMode() {
+    if (selectedIds.length === 0) return alert("メンバーを選んでください");
+    isBossMode = false;
+    isDigMode = true;
+    remainingActions = 0;
+    
+    party = selectedIds.map(sid => { 
+        const c = box.find(b => b.id === sid); 
+        const aura = getEquippedAura(c);
+        // 武器（鉄の剣）の攻撃力+2補正をバトル用ステータスに反映
+        let wpBonus = 0;
+        if (c.weaponId && weapons.some(w => w.id === c.weaponId)) {
+            wpBonus = 2;
+        }
+        return {...c, curH: c.h, maxH: c.h, curM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
+    });
+
+    document.getElementById('view-home').classList.remove('active');
+    document.getElementById('view-battle').classList.add('active');
+    document.getElementById('btn-retreat').style.display = "block";
+    document.getElementById('header-stage-label').innerText = `発掘場`;
+    
+    // 宝（P:0, H:100, M:0, S:0）の生成
+    enemies = [{ name: '宝', id: 888, curH: 100, maxH: 100, p: 0, baseP: 0, baseS: 0, s: 0, curM: 0, m: 0, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null }];
+    
+    document.getElementById('log').innerText = ""; 
+    addLog(`--- 秘宝発掘：宝を引き当てた！ ---`); 
+    cycle();
+}
+
 function openShop(id) { shopTargetId = id; document.getElementById('view-home').classList.remove('active'); document.getElementById('view-shop').classList.add('active'); updateShopUI(); }
 function closeShop() { document.getElementById('view-shop').classList.remove('active'); document.getElementById('view-home').classList.add('active'); updateHomeUI(); }
 
@@ -543,6 +690,7 @@ function extractSkill() {
     if (char && !char.special && confirm("消滅させますか？")) {
         if (char.skill) { seeds.push({ name: char.skill, cost: char.cost || 1 }); }
         char.auraId = null;
+        char.weaponId = null;
         box = box.filter(b => b.id !== shopTargetId); selectedIds = selectedIds.filter(sid => sid !== shopTargetId);
         saveData(); closeShop();
     }
@@ -568,11 +716,16 @@ function getEquippedAura(unitBoxData) {
 }
 
 function startGame() {
-    isBossMode = false; remainingActions = 0;
+    isBossMode = false; isDigMode = false; remainingActions = 0;
     party = selectedIds.map(sid => { 
         const c = box.find(b => b.id === sid); 
         const aura = getEquippedAura(c);
-        return {...c, curH: c.h, maxH: c.h, curM: c.m, baseP: c.p, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
+        // 通常の出撃時にも武器（鉄の剣）の補正を適用
+        let wpBonus = 0;
+        if (c.weaponId && weapons.some(w => w.id === c.weaponId)) {
+            wpBonus = 2;
+        }
+        return {...c, curH: c.h, maxH: c.h, curM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
     });
     stage = 1; document.getElementById('view-home').classList.remove('active'); document.getElementById('view-battle').classList.add('active');
     document.getElementById('btn-retreat').style.display = "block";
@@ -580,11 +733,16 @@ function startGame() {
 }
 
 function startBossBattle(name) {
-    isBossMode = true; currentBossName = name; remainingActions = 0;
+    isBossMode = true; isDigMode = false; currentBossName = name; remainingActions = 0;
     party = selectedIds.map(sid => { 
         const c = box.find(b => b.id === sid); 
         const aura = getEquippedAura(c);
-        return {...c, curH: c.h, maxH: c.h, curM: c.m, baseP: c.p, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
+        // 強者戦にも武器（鉄の剣）の補正を適用
+        let wpBonus = 0;
+        if (c.weaponId && weapons.some(w => w.id === c.weaponId)) {
+            wpBonus = 2;
+        }
+        return {...c, curH: c.h, maxH: c.h, curM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
     });
     document.getElementById('view-boss-select').classList.remove('active');
     document.getElementById('view-battle').classList.add('active');
@@ -752,10 +910,23 @@ function next() {
             addLog("強者を退けた！");
             if (Math.random() < 0.05) {
                 const base = charData.find(c => c.name === currentBossName);
-                box.push({...base, id: Math.random(), auraId: null});
+                box.push({...base, id: Math.random(), auraId: null, weaponId: null});
                 addLog("★" + currentBossName + "が仲間（ボックス）に加わった！");
             }
             saveData(); setTimeout(()=>location.reload(), 1500);
+        } else if (isDigMode) {
+            // 発掘モードの報酬処理（コインは獲得せず、鉄の剣のみを獲得）
+            const newWeapon = {
+                id: Math.random(),
+                name: "鉄の剣",
+                pBonus: 2
+            };
+            weapons.push(newWeapon);
+            
+            addLog(`秘宝発掘成功！`);
+            addLog(`⚔️宝箱から装具【鉄の剣】(攻撃力+2) を獲得した！`);
+            saveData(); 
+            setTimeout(() => location.reload(), 3000);
         } else {
             // バトル報酬（段階別調整）
             let reward = 1;
@@ -767,7 +938,6 @@ function next() {
 
             coins += reward;
             
-            // 獲得したコインを即座にUI表示へ反映
             const coinCountEl = document.getElementById('global-coin-count');
             if (coinCountEl) {
                 coinCountEl.innerText = coins;
@@ -823,7 +993,7 @@ function addLog(m) { const l = document.getElementById('log'); l.innerText += m 
 // データのロード
 if (!loadData()) { 
     ['蟻','蝿','蛆'].forEach(n => { 
-        const b = charData.find(c => c.name === n); if(b) box.push({...b, id: Math.random(), auraId: null}); 
+        const b = charData.find(c => c.name === n); if(b) box.push({...b, id: Math.random(), auraId: null, weaponId: null}); 
     });
     saveData();
 }
