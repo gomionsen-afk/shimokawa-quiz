@@ -5,15 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>漢字RPG - 零 - デバッグモード（オーラ別属性発光完全版）</title>
     <style>
-        body { background: #000; color: #fff; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        /* 【修正】全体の高さ制限を380px×660pxに固定し、枠からはみ出た要素はスクロール（overflow-y: auto）できるようにしました */
-        #game-screen { border: 2px solid #fff; width: 380px; height: 660px; padding: 10px; display: flex; flex-direction: column; background: #000; position: relative; box-sizing: border-box; overflow-y: auto; }
-        .view { display: none; flex-direction: column; height: 100%; width: 100%; box-sizing: border-box; }
+        /* 画面全体の縦固定を解除し、自然なスクロールを許可 */
+        body { background: #000; color: #fff; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 10px 0; box-sizing: border-box; }
+        
+        /* ゲーム画面の縦固定を解除し、スマホでもはみ出さないように修正 */
+        #game-screen { border: 2px solid #fff; width: 380px; max-width: 95vw; min-height: 660px; padding: 10px; display: flex; flex-direction: column; background: #000; position: relative; box-sizing: border-box; }
+        
+        /* 中身が詰まっても全体の枠が伸びてスクロールできるように変更 */
+        .view { display: none; flex-direction: column; width: 100%; box-sizing: border-box; }
         .view.active { display: flex; }
+        
         .global-info { display: flex; justify-content: space-between; font-size: 14px; padding-bottom: 5px; border-bottom: 1px solid #444; color: #ff0; height: 30px; align-items: center; }
         h2 { border-bottom: 1px solid #fff; padding-bottom: 5px; text-align: center; font-size: 18px; margin: 5px 0; }
-        .guide-text { font-size: 10px; color: #888; text-align: center; margin-bottom: 5px; }
-        .box-list { border: 1px solid #333; overflow-y: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 5px; background: #050505; align-content: start; }
+        .guide-text { font-size: 10px; color: #0cc; text-align: center; margin-bottom: 5px; }
+        
+        /* リストエリアが見やすくなるよう高さを少し調整 */
+        .box-list { border: 1px solid #333; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 5px; background: #050505; align-content: start; }
         .box-item { border: 1px solid #555; text-align: center; cursor: pointer; font-size: 20px; position: relative; height: 60px; display: flex; align-items: center; justify-content: center; background: #111; }
         .box-item.selected { border-color: #0f0; background: #030; box-shadow: inset 0 0 5px #0f0; }
         .box-item .rarity { font-size: 8px; position: absolute; top: 2px; left: 2px; color: #ff0; }
@@ -30,7 +37,9 @@
         .hp-bar-bg { width: 80%; height: 6px; background: #300; border: 1px solid #444; position: relative; }
         .hp-bar-fill { height: 100%; background: #f00; width: 100%; transition: width 0.3s; }
         .stats-text { font-size: 10px; color: #ccc; margin-top: 2px; font-family: monospace; }
-        #log { flex: 1; border: 1px solid #333; margin: 5px 0; padding: 8px; font-size: 12px; overflow-y: auto; background: #050505; color: #eee; min-height: 100px; }
+        
+        /* バトルログ部分の固定 */
+        #log { border: 1px solid #333; margin: 5px 0; padding: 8px; font-size: 12px; overflow-y: auto; background: #050505; color: #eee; height: 120px; box-sizing: border-box; }
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; height: 55px; flex-shrink: 0; }
         button { background: #000; color: #fff; border: 1px solid #fff; cursor: pointer; font-family: inherit; font-size: 15px; }
         button:disabled { border-color: #333; color: #444; cursor: not-allowed; }
@@ -52,7 +61,6 @@
         .gacha-res-item { width: 60px; height: 60px; background: #111; border: 1px solid #444; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 18px; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        /* ── オーラシステム用の追加UIパーツのスタイル ── */
         .aura-btn { background: #033; border-color: #0aa; font-size: 11px; line-height: 1.2; }
         .aura-btn span { display: block; font-size: 8px; color: #0cc; }
         .section-title { font-size: 11px; color: #0cc; margin: 4px 0 2px 0; padding-left: 4px; text-align: left; width: 100%; }
@@ -63,13 +71,11 @@
         .equipped-badge { font-size: 7px; position: absolute; bottom: 2px; left: 2px; color: #f0f; border: 1px solid #f0f; padding: 0 1px; background: #202; }
         .current-aura-display { border: 1px dashed #0aa; background: #011; padding: 6px; margin: 5px 0; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
 
-        /* スキルの種用のスタイル */
         .seed-box-item { font-size: 10px !important; border-color: #050 !important; color: #0f0; background: #010; flex-direction: column; transition: 0.2s; }
         .seed-box-item:hover { background: #020; border-color: #0a0 !important; }
         .seed-box-title { font-size: 13px; font-weight: bold; }
         .seed-box-cost { font-size: 8px; color: #8c8; margin-top: 1px; }
 
-        /* ── オーラ個別アニメーション設定 ── */
         .glow-回避 { animation: pulse-blue 2s infinite ease-in-out; }
         @keyframes pulse-blue {
             0% { color: #d0f0ff; text-shadow: 0 0 6px rgba(0, 128, 255, 0.7), 0 0 12px rgba(0, 128, 255, 0.4); }
@@ -120,18 +126,18 @@
 
     <div id="view-home" class="view active">
         <h2>深淵の拠点</h2>
-        <div class="guide-text" style="color:#0cc; margin-bottom:2px;">※キャラを選択（緑枠）して種を押すとスキルを付与！</div>
+        <div class="guide-text">※キャラを選択して種を押すとスキル付与！</div>
         
         <div class="section-title">【仲間の漢字】</div>
-        <div id="my-box" class="box-list" style="flex: 0.4; min-height: 110px;"></div>
+        <div id="my-box" class="box-list" style="max-height: 180px; overflow-y: auto;"></div>
         
         <div class="section-title">【所持オーラ】</div>
-        <div id="aura-box" class="box-list" style="flex: 0.3; min-height: 80px;"></div>
+        <div id="aura-box" class="box-list" style="max-height: 130px; overflow-y: auto;"></div>
 
-        <div class="section-title">【抽出したスキルの種】（選択中キャラに付与）</div>
-        <div id="seed-box" class="box-list" style="flex: 0.3; min-height: 80px;"></div>
+        <div class="section-title">【抽出したスキルの種】</div>
+        <div id="seed-box" class="box-list" style="max-height: 130px; overflow-y: auto;"></div>
 
-        <div class="controls" style="grid-template-columns: repeat(5, 1fr); height: 50px; margin-top: 5px; gap: 4px;">
+        <div class="controls" style="grid-template-columns: repeat(5, 1fr); height: 50px; margin-top: 10px; gap: 4px;">
             <button class="gacha-btn" onclick="playGacha(1)">単発<span>(無料)</span></button>
             <button class="gacha-btn" onclick="playGacha(10)">10連<span>(★3確)</span></button>
             <button class="aura-btn" onclick="playAuraGacha()">霊気<span>(無料)</span></button>
@@ -160,10 +166,10 @@
         </div>
         
         <div class="section-title" id="shop-sub-title">【装備可能なオーラ一覧】</div>
-        <div class="seed-list" id="shop-inventory-list" style="flex:1; border:1px solid #222; background:#000; font-size:11px; padding:5px; overflow-y:auto; display:flex; flex-direction:column; gap:4px;"></div>
+        <div class="seed-list" id="shop-inventory-list" style="height:150px; border:1px solid #222; background:#000; font-size:11px; padding:5px; overflow-y:auto; display:flex; flex-direction:column; gap:4px;"></div>
         
         <button id="btn-extract" onclick="extractSkill()" style="margin: 6px 0 2px 0; background:#303; font-size:11px; height:30px;">スキル抽出（※オーラは手元に戻ります）</button>
-        <button onclick="closeShop()" style="height:40px;">拠点に戻る</button>
+        <button onclick="closeShop()" style="height:40px; margin-top:5px;">拠点に戻る</button>
     </div>
 
     <div id="view-battle" class="view">
@@ -293,7 +299,6 @@ function attachSeedFromHome(seedIndex) {
         
         char.skill = seed.name;
         char.cost = seed.cost || 1;
-        
         seeds.splice(seedIndex, 1);
         
         alert(`${char.name} に 【${seed.name}】 のスキルを付与しました！`);
@@ -480,14 +485,14 @@ function updateShopUI() {
     const freeAuras = auras.filter(a => !box.some(b => b.auraId === a.id));
 
     if (freeAuras.length > 0) {
-        document.getElementById('shop-sub-title').innerText = "【装着可能なオーラ一覧】（クリックで装備）";
+        document.getElementById('shop-sub-title').innerText = "【装着可能なオーラ一覧】";
         shopList.innerHTML = freeAuras.map(a => `
             <div class="seed-item" style="color:#0ff; padding:5px; border:1px solid #066; background:#001; cursor:pointer;" onclick="equipAura(${a.id})">
                 <span>★${a.r} ${a.type} ── (${a.text})</span>
             </div>
         `).join('');
     } else {
-        document.getElementById('shop-sub-title').innerText = "【継承可能なスキルの種】（クリックで習得）";
+        document.getElementById('shop-sub-title').innerText = "【継承可能なスキルの種】";
         shopList.innerHTML = seeds.length ? seeds.map((s, i) => `<div class="seed-item" style="color:#0f0; padding:6px; border:1px solid #050; background:#010; cursor:pointer;" onclick="applySeed(${i})">【${s.name}の種】</div>`).join('') : "<div style='color:#555; text-align:center; padding:10px;'>装着可能なオーラ、または所持している種はありません</div>";
     }
 }
@@ -529,7 +534,6 @@ function buyStat(s) {
     box.find(b => b.id === shopTargetId)[s]++; updateShopUI(); saveData();
 }
 
-// ─── BATTLE ENGINE ───
 let party = [], enemies = [], stage = 1, queue = [], qIdx = 0, isSelecting = false, currentAction = null;
 let remainingActions = 0; 
 
@@ -723,7 +727,7 @@ function next() {
             if (Math.random() < 0.05) {
                 const base = charData.find(c => c.name === currentBossName);
                 box.push({...base, id: Math.random(), auraId: null});
-                addLog("★" + currentBossName + "が仲仲間（ボックス）に加わった！");
+                addLog("★" + currentBossName + "が仲間（ボックス）に加わった！");
             }
             saveData(); setTimeout(()=>location.reload(), 1500);
         } else {
