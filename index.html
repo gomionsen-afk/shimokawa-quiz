@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字RPG - 零 - 完全版（確率調整＆★6解放）</title>
+    <title>漢字RPG - 零 - 完全版（強者の間・新ボス追加）</title>
     <style>
         /* 画面全体の縦固定を解除し、自然なスクロールを許可 */
         body { background: #000; color: #fff; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 10px 0; box-sizing: border-box; }
@@ -169,7 +169,7 @@
 
     <div id="view-boss-select" class="view">
         <h2 style="color:#f00;">強者の間</h2>
-        <div id="boss-list" class="box-list" style="grid-template-columns: 1fr;"></div>
+        <div id="boss-list" class="box-list" style="grid-template-columns: 1fr; max-height: 480px; overflow-y: auto;"></div>
         <button onclick="closeBossSelection()" style="height:50px; margin-top:10px;">拠点に戻る</button>
     </div>
 
@@ -224,14 +224,20 @@ const charData = [
     { name: '蛇', r: 2, p: 2, h: 3, m: 2, s: 3, skill: "毒牙", cost: 1 },
     { name: '蜜蜂', r: 1, p: 1, h: 3, m: 6, s: 2, skill: "甘い蜜", cost: 2 },
     { name: '王蛇', r: 4, p: 12, h: 14, m: 0, s: 12, skill: "丸呑み", cost: 0 },
-    
-    // 新規キャラクター
     { name: '虎', r: 4, p: 10, h: 8, m: 0, s: 12 },
     { name: '銀時', r: 5, p: 15, h: 12, m: 4, s: 7, skill: "連撃", cost: 4 },
     { name: '宿灘', r: 6, p: 20, h: 25, m: 15, s: 8, skill: "御廚子", cost: 15 },
     { name: '埼玉', r: 6, p: 30, h: 30, m: 0, s: 10 },
     { name: '死神', r: 6, p: 44, h: 4, m: 10, s: 4, skill: "イーター", cost: 5 },
-    { name: '天鯨', r: 6, p: 20, h: 45, m: 0, s: 8 }
+    { name: '天鯨', r: 6, p: 20, h: 45, m: 0, s: 8 },
+    
+    // 【新規追加キャラクター】
+    { name: '大雀蜂', r: 4, p: 12, h: 15, m: 8, s: 12, skill: "猛毒", cost: 2 },
+    { name: '大王烏賊', r: 4, p: 10, h: 20, m: 10, s: 5, skill: "巨大触手", cost: 5 },
+    { name: '達磨', r: 4, p: 15, h: 15, m: 6, s: 6, skill: "達磨さんが転んだ", cost: 6 },
+    { name: '火竜', r: 5, p: 22, h: 30, m: 10, s: 12, skill: "炎のブレス", cost: 10 },
+    { name: '不死鳥', r: 5, p: 18, h: 25, m: 0, s: 18, skill: "不死の再生", cost: 0, special: true },
+    { name: '天照', r: 5, p: 30, h: 35, m: 20, s: 8, skill: "神の審判", cost: 10 }
 ];
 
 const auraTypes = ['回避', '行動力', '会心', '回復'];
@@ -245,9 +251,22 @@ const auraSpecs = {
 const stageBaseData = [
     ['蟻','蝿'], ['蜻蛉','蚊'], ['狼','狼','狼'], ['孔雀','雀'], ['雷鰻','雀'],
     ['蟷螂','雷鰻'], ['梟','孔雀'], ['龍','蟷螂'], ['雷鰻','雷鰻','鳳'], ['龍','鳳','龍'],
-    ['虎', '梟'], ['銀時', '蟷螂'], ['宿灘', '龍'], ['埼玉', '天鯨'], ['死神', '鳳']
+    ['大雀蜂', '梟'], ['大王烏賊', '達磨'], ['火竜', '龍'], ['不死鳥', '天照'], ['死神', '鳳']
 ];
-const bossListData = ['雷鰻', '王蛇', '宿灘', '埼玉'];
+
+// 【強者の間のボスリスト】新ボス6体をリストに追加
+const bossListData = ['雷鰻', '王蛇', '宿灘', '埼玉', '大雀蜂', '大王烏賊', '達磨', '火竜', '不死鳥', '天照'];
+
+// 各ボスの体力倍率設定
+function getBossHpMultiplier(name) {
+    if (name === '大雀蜂') return 4;
+    if (name === '大王烏賊') return 6;
+    if (name === '達磨') return 10;
+    if (name === '火竜') return 15;
+    if (name === '不死鳥') return 20;
+    if (name === '天照') return 30;
+    return 3; // 従来のボスは一律3倍
+}
 
 let coins = 0, box = [], selectedIds = [], seeds = [], auras = [], weapons = [], isFreeGachaAvailable = true, shopTargetId = null;
 let isBossMode = false, currentBossName = null;
@@ -465,16 +484,13 @@ function playGacha(times) {
                 const roll = Math.random() * 100;
 
                 if (times === 10 && currentPull === 9) {
-                    // 10連最後の★3以上確定枠（指定比率を維持した比率配分）
-                    // ★3(8%) : ★4(5%) : ★5(1.5%) : ★6(0.5%) = 計15%
-                    const totalWeight = 8 + 5 + 1.5 + 0.5; // 15
+                    const totalWeight = 8 + 5 + 1.5 + 0.5;
                     const fixedRoll = Math.random() * totalWeight;
                     if (fixedRoll < 8) selectedRarity = 3;
                     else if (fixedRoll < 8 + 5) selectedRarity = 4;
                     else if (fixedRoll < 8 + 5 + 1.5) selectedRarity = 5;
                     else selectedRarity = 6;
                 } else {
-                    // 通常時のご指定確率
                     if (roll < 70.0) selectedRarity = 1;
                     else if (roll < 70.0 + 15.0) selectedRarity = 2;
                     else if (roll < 70.0 + 15.0 + 8.0) selectedRarity = 3;
@@ -483,7 +499,6 @@ function playGacha(times) {
                     else selectedRarity = 6;
                 }
 
-                // 決定したレアリティのプールからキャラクターを等確率で抽選
                 const pool = charData.filter(c => c.r === selectedRarity);
                 const base = pool[Math.floor(Math.random() * pool.length)];
                 const newUnit = {...base, id: Math.random(), auraId: null, weaponId: null};
@@ -582,8 +597,9 @@ function openBossSelection() {
     document.getElementById('view-boss-select').classList.add('active');
     document.getElementById('boss-list').innerHTML = bossListData.map(name => {
         const char = charData.find(c => c.name === name);
+        const mult = getBossHpMultiplier(name);
         return `<div class="box-item" style="height:80px; font-size:24px; color:#f88; grid-template-columns:1fr;" onclick="startBossBattle('${name}')">
-            ${name} <span style="font-size:12px; color:#ccc;">(HP:${char.h * 3})</span>
+            ${name} <span style="font-size:12px; color:#ccc;">(HP:${char.h * mult} / 倍率:${mult}倍)</span>
         </div>`;
     }).join('');
 }
@@ -591,14 +607,14 @@ function closeBossSelection() { document.getElementById('view-boss-select').clas
 
 function startDigMode() {
     if (selectedIds.length === 0) return alert("メンバーを選んでください");
-    isBossMode = false; isDigMode = true; remainingActions = 0;
+    isBossMode = false; isDigMode = true; remainingActions = 0; darumaTrigger = null;
     
     party = selectedIds.map(sid => { 
         const c = box.find(b => b.id === sid); 
         const aura = getEquippedAura(c);
         let wpBonus = 0;
         if (c.weaponId && weapons.some(w => w.id === c.weaponId)) wpBonus = 2;
-        return {...c, curH: c.h, maxH: c.h, curM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
+        return {...c, curH: c.h, maxH: c.h, curM: c.m, maxM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura, usedPhoenix: false}; 
     });
 
     document.getElementById('view-home').classList.remove('active');
@@ -606,7 +622,7 @@ function startDigMode() {
     document.getElementById('btn-retreat').style.display = "block";
     document.getElementById('header-stage-label').innerText = `発掘場`;
     
-    enemies = [{ name: '宝', id: 888, curH: 100, maxH: 100, p: 0, baseP: 0, baseS: 0, s: 0, curM: 0, m: 0, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null }];
+    enemies = [{ name: '宝', id: 888, curH: 100, maxH: 100, p: 0, baseP: 0, baseS: 0, s: 0, curM: 0, m: 0, maxM: 0, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null }];
     document.getElementById('log').innerText = ""; 
     addLog(`--- 秘宝発掘：宝を引き当てた！ ---`); 
     cycle();
@@ -681,6 +697,7 @@ function buyStat(s, cost) {
 }
 
 let party = [], enemies = [], stage = 1, queue = [], qIdx = 0, isSelecting = false, currentAction = null, remainingActions = 0; 
+let darumaTrigger = null; // 「達磨さんが転んだ」の罠発動待機用（仕掛けた側の陣営を記憶）
 
 function getEquippedAura(unitBoxData) {
     if (!unitBoxData || !unitBoxData.auraId) return null;
@@ -688,13 +705,13 @@ function getEquippedAura(unitBoxData) {
 }
 
 function startGame() {
-    isBossMode = false; isDigMode = false; remainingActions = 0;
+    isBossMode = false; isDigMode = false; remainingActions = 0; darumaTrigger = null;
     party = selectedIds.map(sid => { 
         const c = box.find(b => b.id === sid); 
         const aura = getEquippedAura(c);
         let wpBonus = 0;
         if (c.weaponId && weapons.some(w => w.id === c.weaponId)) wpBonus = 2;
-        return {...c, curH: c.h, maxH: c.h, curM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
+        return {...c, curH: c.h, maxH: c.h, curM: c.m, maxM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura, usedPhoenix: false}; 
     });
     stage = 1; document.getElementById('view-home').classList.remove('active'); document.getElementById('view-battle').classList.add('active');
     document.getElementById('btn-retreat').style.display = "block";
@@ -702,21 +719,26 @@ function startGame() {
 }
 
 function startBossBattle(name) {
-    isBossMode = true; isDigMode = false; currentBossName = name; remainingActions = 0;
+    isBossMode = true; isDigMode = false; currentBossName = name; remainingActions = 0; darumaTrigger = null;
     party = selectedIds.map(sid => { 
         const c = box.find(b => b.id === sid); 
         const aura = getEquippedAura(c);
         let wpBonus = 0;
         if (c.weaponId && weapons.some(w => w.id === c.weaponId)) wpBonus = 2;
-        return {...c, curH: c.h, maxH: c.h, curM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
+        return {...c, curH: c.h, maxH: c.h, curM: c.m, maxM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura, usedPhoenix: false}; 
     });
     document.getElementById('view-boss-select').classList.remove('active');
     document.getElementById('view-battle').classList.add('active');
     document.getElementById('btn-retreat').style.display = "block";
     document.getElementById('header-stage-label').innerText = `強者の間`;
+    
     let base = charData.find(c => c.name === name);
-    enemies = [{...base, id: 999, curH: base.h * 3, maxH: base.h * 3, p: base.p, baseP: base.p, baseS: base.s, curM: base.m, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null}];
-    document.getElementById('log').innerText = ""; addLog(`--- 強者：${name} ---`); cycle();
+    // ボスごとの専用倍率を反映して体力を算出
+    const mult = getBossHpMultiplier(name);
+    const bossHp = base.h * mult;
+
+    enemies = [{...base, id: 999, curH: bossHp, maxH: bossHp, p: base.p, baseP: base.p, baseS: base.s, curM: base.m, maxM: base.m, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null, usedPhoenix: false}];
+    document.getElementById('log').innerText = ""; addLog(`--- 強者：${name} (${mult}倍) ---`); cycle();
 }
 
 function initBattle() {
@@ -726,9 +748,20 @@ function initBattle() {
     enemies = enemyNames.map((n, i) => {
         let base = charData.find(c => c.name === n) || charData[0];
         let buff = Math.floor(stage / 4);
-        return {...base, id: 900+i, curH: base.h+buff*5, maxH: base.h+buff*5, p: base.p+buff, baseP: base.p+buff, baseS: base.s, curM: base.m, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null};
+        return {...base, id: 900+i, curH: base.h+buff*5, maxH: base.h+buff*5, p: base.p+buff, baseP: base.p+buff, baseS: base.s, curM: base.m, maxM: base.m, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null, usedPhoenix: false};
     });
     document.getElementById('log').innerText = ""; addLog(`--- 第 ${stage} 層 ---`); cycle();
+}
+
+function checkAndRevivePhoenix(u) {
+    if (u.curH <= 0 && (u.name === '不死鳥' || u.skill === '不死の再生') && !u.usedPhoenix) {
+        u.curH = u.maxH;
+        u.curM = u.maxM;
+        u.usedPhoenix = true;
+        addLog(`✨【不死の再生】${u.name}は炎を纏い、一度だけ完全復活した！`);
+        return true;
+    }
+    return false;
 }
 
 function cycle() {
@@ -763,6 +796,15 @@ async function turn() {
     isSelecting = false; currentAction = null; updateUI(); 
     const u = queue[qIdx]; if (!u || u.curH <= 0) return next();
     
+    // 達磨さんが転んだの罠判定（行動を開始したタイミングで、相手陣営の罠があれば発動）
+    if (darumaTrigger !== null && darumaTrigger !== u.isP) {
+        darumaTrigger = null; 
+        u.curH = Math.max(0, u.curH - 20);
+        addLog(`🚨 動いたな！「達磨さんが転んだ」の呪いが発動！ ${u.name} に 20 ダメージ！`);
+        checkAndRevivePhoenix(u);
+        if (u.curH <= 0) return next();
+    }
+
     if (remainingActions <= 0) {
         remainingActions = 1;
         if (u.aura && u.aura.type === '行動力') {
@@ -774,7 +816,7 @@ async function turn() {
         }
     }
 
-    if (u.poison) { u.curH = Math.max(0, u.curH - 1); addLog(u.name + "：毒1ダメ"); if(u.curH <= 0) return next(); }
+    if (u.poison) { u.curH = Math.max(0, u.curH - 1); addLog(u.name + "：毒1ダメ"); checkAndRevivePhoenix(u); if(u.curH <= 0) return next(); }
     if (u.charm > 0) {
         u.charm--; addLog(u.name + "は魅了中！");
         await new Promise(r => setTimeout(r, 600));
@@ -786,14 +828,14 @@ async function turn() {
 
     if (u.isP) { 
         document.getElementById('btn-atk').disabled = false; 
-        document.getElementById('btn-skl').disabled = !u.skill || u.skill === '再生'; 
+        document.getElementById('btn-skl').disabled = !u.skill || u.skill === '再生' || u.skill === '不死の再生'; 
     } else {
         document.getElementById('btn-atk').disabled = true; document.getElementById('btn-skl').disabled = true;
         await new Promise(r => setTimeout(r, 600));
         const t_list = party.filter(p => p.curH > 0);
         if (t_list.length > 0) {
-            const hasAoE = (u.skill === '感電' || u.skill === '咆哮' || u.skill === '鱗粉' || u.skill === '御廚子');
-            if ((hasAoE || u.skill === '毒牙' || u.skill === '丸呑み' || u.skill === '連撃' || u.skill === 'イーター') && u.curM >= u.cost) {
+            const hasAoE = (u.skill === '感電' || u.skill === '咆哮' || u.skill === '鱗粉' || u.skill === '御廚子' || u.skill === '巨大触手' || u.skill === '炎のブレス');
+            if ((hasAoE || u.skill === '毒牙' || u.skill === '丸呑み' || u.skill === '連撃' || u.skill === 'イーター' || u.skill === '猛毒' || u.skill === '達磨さんが転んだ' || u.skill === '神の審判') && u.curM >= u.cost) {
                 executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'skill');
             } else executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'attack');
         } else next();
@@ -803,8 +845,9 @@ async function turn() {
 function startTargetSelection(type) {
     const u = queue[qIdx];
     if (type === 'skill' && u.curM < u.cost) { addLog("MP不足！"); return; }
-    const isAoE = (u.skill === '感電' || u.skill === '咆哮' || u.skill === '鱗粉' || u.skill === '御廚子');
-    if (type === 'skill' && isAoE) { executeAction(u, null, 'skill'); return; }
+    const isAoE = (u.skill === '感電' || u.skill === '咆哮' || u.skill === '鱗粉' || u.skill === '御廚子' || u.skill === '巨大触手' || u.skill === '炎のブレス');
+    const isSelfOrGlobal = isAoE || (u.skill === '達磨さんが転んだ');
+    if (type === 'skill' && isSelfOrGlobal) { executeAction(u, null, 'skill'); return; }
     isSelecting = true; currentAction = type; addLog(type === 'attack' ? "標的を選択" : "対象を選択"); updateUI();
 }
 
@@ -829,34 +872,45 @@ function executeAction(u, t, type) {
         t.curH = Math.max(0, t.curH - dmg); u.lastDmg = dmg;
         if (isCrit) addLog("💥【会心】" + u.name + "の一撃：" + dmg + "ダメ");
         else addLog(u.name + "の攻撃：" + dmg + "ダメ");
+        checkAndRevivePhoenix(t);
     } else {
         u.curM -= u.cost; addLog(u.name + "：【" + u.skill + "】");
         const targets = u.isP ? enemies : party;
         
-        if (u.skill === '感電') { targets.forEach(e => { if(e.curH>0) e.curH = Math.max(0, e.curH - 3); }); }
-        else if (u.skill === '御廚子') { targets.forEach(e => { if(e.curH>0) e.curH = Math.max(0, e.curH - 30); }); addLog("領域展開。全体に30の固定ダメージ！"); }
+        if (u.skill === '感電') { targets.forEach(e => { if(e.curH>0) { e.curH = Math.max(0, e.curH - 3); checkAndRevivePhoenix(e); } }); }
+        else if (u.skill === '御廚子') { targets.forEach(e => { if(e.curH>0) { e.curH = Math.max(0, e.curH - 30); checkAndRevivePhoenix(e); } }); addLog("領域展開。全体に30の固定ダメージ！"); }
+        else if (u.skill === '巨大触手') { targets.forEach(e => { if(e.curH>0) { e.curH = Math.max(0, e.curH - 10); checkAndRevivePhoenix(e); } }); addLog("巨大な触手が敵全体を薙ぎ払う！ 10ダメージ！"); }
+        else if (u.skill === '炎のブレス') { targets.forEach(e => { if(e.curH>0) { e.curH = Math.max(0, e.curH - 20); checkAndRevivePhoenix(e); } }); addLog("灼熱の烈火が敵全体を包み込む！ 20ダメージ！"); }
+        else if (u.skill === '達磨さんが転んだ') { darumaTrigger = u.isP; addLog("達磨がこちらを凝視している...（次に動いた敵へ罠発動）"); }
+        else if (u.skill === '神の審判') {
+            const judgeDmg = Math.random() < 0.5 ? 10 : 60;
+            t.curH = Math.max(0, t.curH - judgeDmg);
+            addLog(`天からの光が差し込む！ ${t.name}に ${judgeDmg} の審判ダメージ！`);
+            checkAndRevivePhoenix(t);
+        }
         else if (u.skill === '連撃') {
-            let d1 = u.p; t.curH = Math.max(0, t.curH - d1);
-            let d2 = u.p; t.curH = Math.max(0, t.curH - d2);
+            let d1 = u.p; t.curH = Math.max(0, t.curH - d1); checkAndRevivePhoenix(t);
+            let d2 = u.p; t.curH = Math.max(0, t.curH - d2); checkAndRevivePhoenix(t);
             u.lastDmg = d1 + d2;
             addLog(`連続の斬撃！ ${t.name}に ${d1}、${d2} の連続ダメージ！`);
         }
         else if (u.skill === 'イーター') {
             t.curH = Math.max(0, t.curH - 30); u.curH = Math.min(u.maxH, u.curH + 30);
             addLog(`${t.name}から魂を喰らう！ 30ダメ与えて、自身は30回復！`);
+            checkAndRevivePhoenix(t);
         }
         else if (u.skill === '魅了') { t.charm = 2; addLog(t.name + "を魅了！"); }
         else if (u.skill === '吸血') { u.curH = Math.min(u.maxH, u.curH + 3); }
-        else if (u.skill === '血欲') { t.curH = Math.max(0, t.curH - 2); u.curH = Math.min(u.maxH, u.curH + 2); }
-        else if (u.skill === '物真似') { t.curH = Math.max(0, t.curH - u.lastDmg); }
+        else if (u.skill === '血欲') { t.curH = Math.max(0, t.curH - 2); u.curH = Math.min(u.maxH, u.curH + 2); checkAndRevivePhoenix(t); }
+        else if (u.skill === '物真似') { t.curH = Math.max(0, t.curH - u.lastDmg); checkAndRevivePhoenix(t); }
         else if (u.skill === '賢者の知恵') { t.curH = Math.min(t.maxH, t.curH + 5); }
         else if (u.skill === '鱗粉') targets.forEach(e => { if(e.curH>0) e.poison = true; });
-        else if (u.skill === '咆哮') targets.forEach(e => { if(e.curH>0) e.curH = Math.max(0, e.curH - 8); });
+        else if (u.skill === '咆哮') targets.forEach(e => { if(e.curH>0) { e.curH = Math.max(0, e.curH - 8); checkAndRevivePhoenix(e); } });
         else if (u.skill === '身代わり') { u.guard = true; }
         else if (u.skill === '転生') { t.curH = t.maxH; }
-        else if (u.skill === '毒牙') { t.poison = true; addLog(t.name + "を毒にした！"); }
+        else if (u.skill === '毒牙' || u.skill === '猛毒') { t.poison = true; addLog(t.name + "を致命的な毒にした！"); }
         else if (u.skill === '甘い蜜') { t.curH = Math.min(t.maxH, t.curH + 3); addLog(t.name + "のHPが3回復！"); }
-        else if (u.skill === '丸呑み') { t.curH = Math.max(0, t.curH - 15); addLog(t.name + "に15の固定ダメージ！"); }
+        else if (u.skill === '丸呑み') { t.curH = Math.max(0, t.curH - 15); addLog(t.name + "に15の固定ダメージ！"); checkAndRevivePhoenix(t); }
     }
     next();
 }
@@ -864,7 +918,7 @@ function executeAction(u, t, type) {
 function next() {
     updateUI();
     if (enemies.every(e => e.curH <= 0)) { 
-        party.forEach(p => { p.curH = p.maxH; p.curM = p.m; p.poison = false; p.charm = 0; p.guard = false; });
+        party.forEach(p => { p.curH = p.maxH; p.curM = p.m; p.poison = false; p.charm = 0; p.guard = false; p.usedPhoenix = false; });
         addLog("勝利！全員全回復した");
         
         if (isBossMode) {
