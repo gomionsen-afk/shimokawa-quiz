@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字RPG - 零 - 完全版（エコノミー調整・装具対応）</title>
+    <title>漢字RPG - 零 - 完全版（確率調整＆★6解放）</title>
     <style>
         /* 画面全体の縦固定を解除し、自然なスクロールを許可 */
         body { background: #000; color: #fff; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 10px 0; box-sizing: border-box; }
@@ -23,7 +23,7 @@
         .box-list { border: 1px solid #333; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 5px; background: #050505; align-content: start; }
         .box-item { border: 1px solid #555; text-align: center; cursor: pointer; font-size: 20px; position: relative; height: 60px; display: flex; align-items: center; justify-content: center; background: #111; user-select: none; }
         .box-item.selected { border-color: #0f0; background: #030; box-shadow: inset 0 0 5px #0f0; }
-        .box-item .rarity { font-size: 8px; position: absolute; top: 2px; left: 2px; color: #ff0; }
+        .box-item .rarity { font-size: 8px; position: absolute; top: 2px; left: 2px; color: #ff0; white-space: nowrap; transform: scale(0.85); transform-origin: top left; }
         .box-item .shop-hint { font-size: 7px; position: absolute; bottom: 2px; right: 2px; color: #0aa; border: 1px solid #044; padding: 0 1px; }
         #turn-order { font-size: 11px; color: #ff0; text-align: center; height: 20px; line-height: 20px; border-bottom: 1px solid #222; white-space: nowrap; overflow: hidden; }
         .unit-area { display: flex; justify-content: space-around; height: 125px; align-items: center; background: #050505; border: 1px solid #111; width: 100%; box-sizing: border-box; flex-shrink: 0; }
@@ -58,8 +58,10 @@
         #gacha-effect-text { font-size: 24px; color: #a0a; margin-bottom: 20px; letter-spacing: 5px; animation: pulse 1s infinite; }
         #gacha-kanji-display { font-size: 120px; text-shadow: 0 0 20px #fff; height: 130px; line-height: 130px; text-align: center; }
         .rarity-high { text-shadow: 0 0 30px #ff0 !important; color: #ff0; }
+        .rarity-god { text-shadow: 0 0 35px #f0f, 0 0 15px #ff0 !important; color: #fff; animation: god-glow 1s infinite alternate; }
+        @keyframes god-glow { from { text-shadow: 0 0 20px #f0f, 0 0 10px #ff0; } to { text-shadow: 0 0 40px #ff0, 0 0 20px #f0f; } }
         #gacha-result-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; width: 90%; margin-top: 10px; }
-        .gacha-res-item { width: 60px; height: 60px; background: #111; border: 1px solid #444; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 18px; }
+        .gacha-res-item { width: 60px; height: 60px; background: #111; border: 1px solid #444; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 16px; position: relative; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
         .aura-btn { background: #033; border-color: #0aa; font-size: 11px; line-height: 1.2; }
@@ -221,7 +223,15 @@ const charData = [
     { name: '雷鰻', r: 4, p: 3, h: 10, m: 4, s: 3, skill: "感電", cost: 2 },
     { name: '蛇', r: 2, p: 2, h: 3, m: 2, s: 3, skill: "毒牙", cost: 1 },
     { name: '蜜蜂', r: 1, p: 1, h: 3, m: 6, s: 2, skill: "甘い蜜", cost: 2 },
-    { name: '王蛇', r: 4, p: 12, h: 14, m: 0, s: 12, skill: "丸呑み", cost: 0 }
+    { name: '王蛇', r: 4, p: 12, h: 14, m: 0, s: 12, skill: "丸呑み", cost: 0 },
+    
+    // 新規キャラクター
+    { name: '虎', r: 4, p: 10, h: 8, m: 0, s: 12 },
+    { name: '銀時', r: 5, p: 15, h: 12, m: 4, s: 7, skill: "連撃", cost: 4 },
+    { name: '宿灘', r: 6, p: 20, h: 25, m: 15, s: 8, skill: "御廚子", cost: 15 },
+    { name: '埼玉', r: 6, p: 30, h: 30, m: 0, s: 10 },
+    { name: '死神', r: 6, p: 44, h: 4, m: 10, s: 4, skill: "イーター", cost: 5 },
+    { name: '天鯨', r: 6, p: 20, h: 45, m: 0, s: 8 }
 ];
 
 const auraTypes = ['回避', '行動力', '会心', '回復'];
@@ -234,13 +244,14 @@ const auraSpecs = {
 
 const stageBaseData = [
     ['蟻','蝿'], ['蜻蛉','蚊'], ['狼','狼','狼'], ['孔雀','雀'], ['雷鰻','雀'],
-    ['蟷螂','雷鰻'], ['梟','孔雀'], ['龍','蟷螂'], ['雷鰻','雷鰻','鳳'], ['龍','鳳','龍']
+    ['蟷螂','雷鰻'], ['梟','孔雀'], ['龍','蟷螂'], ['雷鰻','雷鰻','鳳'], ['龍','鳳','龍'],
+    ['虎', '梟'], ['銀時', '蟷螂'], ['宿灘', '龍'], ['埼玉', '天鯨'], ['死神', '鳳']
 ];
-const bossListData = ['雷鰻', '王蛇'];
+const bossListData = ['雷鰻', '王蛇', '宿灘', '埼玉'];
 
 let coins = 0, box = [], selectedIds = [], seeds = [], auras = [], weapons = [], isFreeGachaAvailable = true, shopTargetId = null;
 let isBossMode = false, currentBossName = null;
-let isDigMode = false; // 発掘モード判定フラグ
+let isDigMode = false; 
 
 function saveData() { localStorage.setItem('kanji_rpg_AURA_TYPE_GLOW', JSON.stringify({ coins, box, selectedIds, seeds, auras, weapons, isFreeGachaAvailable })); }
 function loadData() {
@@ -248,11 +259,11 @@ function loadData() {
     if (saved) {
         const d = JSON.parse(saved);
         box = (d.box || []).filter(c => c && c.name);
-        coins = d.coins || 0; // セーブデータから正常にコインをロード
+        coins = d.coins || 0; 
         selectedIds = (d.selectedIds || []).filter(sid => box.some(b => b.id === sid));
         seeds = d.seeds || [];
         auras = d.auras || [];
-        weapons = d.weapons || []; // 武器データのロード
+        weapons = d.weapons || []; 
         isFreeGachaAvailable = true;
         return true;
     } return false;
@@ -304,7 +315,6 @@ function updateHomeUI() {
         }).join('');
     }
 
-    // 武器ボックスのUI更新
     const weaponBox = document.getElementById('weapon-box');
     if (weapons.length === 0) {
         weaponBox.innerHTML = `<div style="grid-column: span 4; color: #555; text-align: center; font-size: 11px; padding-top: 15px;">装具はありません</div>`;
@@ -321,12 +331,9 @@ function updateHomeUI() {
     }
 
     document.getElementById('btn-start').disabled = !selectedIds.length;
-    
-    // 売却ボタンの活性/非活性の制御 (選択されているキャラが1つ以上ある場合のみ活性化)
     document.getElementById('btn-sell-unit').disabled = selectedIds.length === 0;
 }
 
-// キャラクター売却処理
 function sellSelectedUnit() {
     if (selectedIds.length === 0) return;
     
@@ -334,7 +341,6 @@ function sellSelectedUnit() {
     const char = box.find(b => b.id === targetId);
     
     if (!char) return;
-    
     if (box.length <= 1) {
         alert("最後の1体は売却（お別れ）できません。");
         return;
@@ -345,12 +351,10 @@ function sellSelectedUnit() {
     else if (char.r === 3) rewardCoin = 3;
     else if (char.r === 4) rewardCoin = 5;
     else if (char.r === 5) rewardCoin = 8;
-    else if (char.r === 6) rewardCoin = 15;
+    else if (char.r === 6) rewardCoin = 30;
     
     if (confirm(`選択中の「${char.name} (★${char.r})」と別れの儀を行いますか？\n（取得コイン: ${rewardCoin}枚）\n※装着中のオーラ・装具は手元に戻ります。`)) {
         coins += rewardCoin;
-        
-        // 売却されるキャラの装備を外す
         char.auraId = null;
         char.weaponId = null;
 
@@ -365,62 +369,47 @@ function sellSelectedUnit() {
 
 function attachSeedFromHome(seedIndex) {
     if (selectedIds.length === 0) {
-        alert("種を付ける漢字を上のリストから選択（クリックして緑枠に）してください。");
+        alert("種を付ける漢字を上のリストから選択してください。");
         return;
     }
-    
     const targetId = selectedIds[selectedIds.length - 1];
     const char = box.find(b => b.id === targetId);
     
     if (char) {
         const seed = seeds[seedIndex];
         const oldSkill = char.skill;
-        
-        if (oldSkill && !confirm(`既にスキル【${oldSkill}】を持っています。上書きして【${seed.name}】を習得させますか？`)) {
-            return;
-        }
+        if (oldSkill && !confirm(`既にスキル【${oldSkill}】を持っています。上書きして【${seed.name}】を習得させますか？`)) return;
         
         char.skill = seed.name;
         char.cost = seed.cost || 1;
         seeds.splice(seedIndex, 1);
         
         alert(`${char.name} に 【${seed.name}】 のスキルを付与しました！`);
-        saveData();
-        updateHomeUI();
+        saveData(); updateHomeUI();
     }
 }
 
-// 武器の装備・付け替え処理
 function equipWeaponFromHome(weaponIndex) {
     if (selectedIds.length === 0) {
-        alert("武器を装備させる漢字を上のリストから選択（クリックして緑枠に）してください。");
+        alert("武器を装備させる漢字を上のリストから選択してください。");
         return;
     }
-
     const targetId = selectedIds[selectedIds.length - 1];
     const char = box.find(b => b.id === targetId);
     const weapon = weapons[weaponIndex];
-
     if (!char || !weapon) return;
 
-    // すでに他のキャラが装備しているなら、そのキャラから外す
     const currentOwner = box.find(b => b.weaponId === weapon.id);
-    if (currentOwner) {
-        currentOwner.weaponId = null;
-    }
+    if (currentOwner) currentOwner.weaponId = null;
 
-    // もし選択キャラが既に別の武器（同種含む）を持っていたら上書き（元のは未装備になるだけ）
     if (char.weaponId === weapon.id) {
-        // 同じ武器をクリックした場合は「外す」処理にする
         char.weaponId = null;
         alert(`${char.name} の装具を外しました。`);
     } else {
         char.weaponId = weapon.id;
         alert(`${char.name} に 【${weapon.name}】 を装備しました！（攻撃力+2）`);
     }
-
-    saveData();
-    updateHomeUI();
+    saveData(); updateHomeUI();
 }
 
 function toggleSelect(id) {
@@ -435,7 +424,6 @@ function playGacha(times) {
         alert(`コインが不足しています！（必要コイン: ${cost}枚 / 所持コイン: ${coins}枚）`);
         return;
     }
-    
     coins -= cost;
     document.getElementById('global-coin-count').innerText = coins;
 
@@ -449,7 +437,7 @@ function playGacha(times) {
     closeBtn.style.display = 'none';
     resultName.innerText = "";
     resultList.innerHTML = "";
-    display.classList.remove('rarity-high');
+    display.className = "";
     display.style.display = 'block';
 
     let currentPull = 0;
@@ -460,8 +448,7 @@ function playGacha(times) {
             display.style.display = 'none';
             resultName.innerText = "── 召喚結果 ──";
             closeBtn.style.display = 'block';
-            saveData();
-            return;
+            saveData(); return;
         }
 
         let count = 0;
@@ -474,10 +461,30 @@ function playGacha(times) {
             if (count > 12) {
                 clearInterval(interval);
                 
-                let pool = charData;
+                let selectedRarity = 1;
+                const roll = Math.random() * 100;
+
                 if (times === 10 && currentPull === 9) {
-                    pool = charData.filter(c => c.r >= 3);
+                    // 10連最後の★3以上確定枠（指定比率を維持した比率配分）
+                    // ★3(8%) : ★4(5%) : ★5(1.5%) : ★6(0.5%) = 計15%
+                    const totalWeight = 8 + 5 + 1.5 + 0.5; // 15
+                    const fixedRoll = Math.random() * totalWeight;
+                    if (fixedRoll < 8) selectedRarity = 3;
+                    else if (fixedRoll < 8 + 5) selectedRarity = 4;
+                    else if (fixedRoll < 8 + 5 + 1.5) selectedRarity = 5;
+                    else selectedRarity = 6;
+                } else {
+                    // 通常時のご指定確率
+                    if (roll < 70.0) selectedRarity = 1;
+                    else if (roll < 70.0 + 15.0) selectedRarity = 2;
+                    else if (roll < 70.0 + 15.0 + 8.0) selectedRarity = 3;
+                    else if (roll < 70.0 + 15.0 + 8.0 + 5.0) selectedRarity = 4;
+                    else if (roll < 70.0 + 15.0 + 8.0 + 5.0 + 1.5) selectedRarity = 5;
+                    else selectedRarity = 6;
                 }
+
+                // 決定したレアリティのプールからキャラクターを等確率で抽選
+                const pool = charData.filter(c => c.r === selectedRarity);
                 const base = pool[Math.floor(Math.random() * pool.length)];
                 const newUnit = {...base, id: Math.random(), auraId: null, weaponId: null};
                 
@@ -485,12 +492,17 @@ function playGacha(times) {
                 results.push(newUnit);
                 
                 display.innerText = base.name;
-                if (base.r >= 4) display.classList.add('rarity-high');
-                else display.classList.remove('rarity-high');
+                display.className = "";
+                if (base.r === 6) display.classList.add('rarity-god');
+                else if (base.r >= 4) display.classList.add('rarity-high');
+
+                let borderCol = '#444';
+                if (base.r === 6) borderCol = '#f0f';
+                else if (base.r >= 4) borderCol = '#ff0';
 
                 resultList.innerHTML += `
-                    <div class="gacha-res-item" style="color:${base.r>=4?'#ff0':'#fff'}; border-color:${base.r>=4?'#ff0':'#444'}">
-                        <span style="font-size:7px; color:#ff0;">${'★'.repeat(base.r)}</span>
+                    <div class="gacha-res-item" style="color:${base.r===6?'#f0f':base.r>=4?'#ff0':'#fff'}; border-color:${borderCol}">
+                        <span class="rarity">${'★'.repeat(base.r)}</span>
                         ${base.name}
                     </div>
                 `;
@@ -500,7 +512,6 @@ function playGacha(times) {
             }
         }, 30);
     };
-
     pullNext();
 }
 
@@ -510,7 +521,6 @@ function playAuraGacha() {
         alert(`コインが不足しています！（必要コイン: ${cost}枚 / 所持コイン: ${coins}枚）`);
         return;
     }
-
     coins -= cost;
     document.getElementById('global-coin-count').innerText = coins;
 
@@ -524,7 +534,7 @@ function playAuraGacha() {
     closeBtn.style.display = 'none';
     resultName.innerText = "霊気収束中...";
     resultList.innerHTML = "";
-    display.classList.remove('rarity-high');
+    display.className = "";
     display.style.display = 'block';
 
     let count = 0;
@@ -533,7 +543,6 @@ function playAuraGacha() {
         count++;
         if (count > 15) {
             clearInterval(interval);
-            
             let r = 1;
             const rand = Math.random() * 100;
             if (rand < 0.5) r = 5;
@@ -545,14 +554,7 @@ function playAuraGacha() {
             const type = auraTypes[Math.floor(Math.random() * auraTypes.length)];
             const spec = auraSpecs[type][r];
 
-            const newAura = {
-                id: Math.random(),
-                type: type,
-                r: r,
-                value: spec.val,
-                text: spec.txt
-            };
-
+            const newAura = { id: Math.random(), type: type, r: r, value: spec.val, text: spec.txt };
             auras.push(newAura);
             
             display.innerText = type;
@@ -561,8 +563,8 @@ function playAuraGacha() {
             resultName.innerText = "オーラ獲得！";
             resultList.innerHTML = `
                 <div class="gacha-res-item" style="width:140px; height:80px; color:${r>=4?'#ff0':'#0ff'}; border-color:#0aa;">
-                    <span style="font-size:8px; color:#ff0;">${'★'.repeat(r)}</span>
-                    <div style="font-size:16px; font-weight:bold;">${type}</div>
+                    <span class="rarity">${'★'.repeat(r)}</span>
+                    <div style="font-size:16px; font-weight:bold; margin-top:8px;">${type}</div>
                     <div style="font-size:9px; color:#ccc;">${spec.txt}</div>
                 </div>
             `;
@@ -572,10 +574,7 @@ function playAuraGacha() {
     }, 40);
 }
 
-function closeGachaEffect() {
-    document.getElementById('gacha-overlay').style.display = 'none';
-    updateHomeUI();
-}
+function closeGachaEffect() { document.getElementById('gacha-overlay').style.display = 'none'; updateHomeUI(); }
 
 function openBossSelection() {
     if (selectedIds.length === 0) return alert("メンバーを選んでください");
@@ -590,21 +589,15 @@ function openBossSelection() {
 }
 function closeBossSelection() { document.getElementById('view-boss-select').classList.remove('active'); document.getElementById('view-home').classList.add('active'); }
 
-/* 発掘モード開始処理 */
 function startDigMode() {
     if (selectedIds.length === 0) return alert("メンバーを選んでください");
-    isBossMode = false;
-    isDigMode = true;
-    remainingActions = 0;
+    isBossMode = false; isDigMode = true; remainingActions = 0;
     
     party = selectedIds.map(sid => { 
         const c = box.find(b => b.id === sid); 
         const aura = getEquippedAura(c);
-        // 武器（鉄の剣）の攻撃力+2補正をバトル用ステータスに反映
         let wpBonus = 0;
-        if (c.weaponId && weapons.some(w => w.id === c.weaponId)) {
-            wpBonus = 2;
-        }
+        if (c.weaponId && weapons.some(w => w.id === c.weaponId)) wpBonus = 2;
         return {...c, curH: c.h, maxH: c.h, curM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
     });
 
@@ -613,9 +606,7 @@ function startDigMode() {
     document.getElementById('btn-retreat').style.display = "block";
     document.getElementById('header-stage-label').innerText = `発掘場`;
     
-    // 宝（P:0, H:100, M:0, S:0）の生成
     enemies = [{ name: '宝', id: 888, curH: 100, maxH: 100, p: 0, baseP: 0, baseS: 0, s: 0, curM: 0, m: 0, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null }];
-    
     document.getElementById('log').innerText = ""; 
     addLog(`--- 秘宝発掘：宝を引き当てた！ ---`); 
     cycle();
@@ -626,7 +617,6 @@ function closeShop() { document.getElementById('view-shop').classList.remove('ac
 
 function updateShopUI() {
     const char = box.find(b => b.id === shopTargetId); if(!char) return closeShop();
-    
     document.getElementById('shop-unit-detail').innerHTML = `<span class="kanji" style="font-size:55px;">${char.name}</span><div class="stats-text">攻撃:${char.p} HP:${char.h} 速さ:${char.s} MP:${char.m}</div><div style="font-size:13px; margin-top:3px; color:#ff0;">技: ${char.skill || 'なし'}</div>`;
     
     const currentAuraZone = document.getElementById('current-aura-zone');
@@ -639,8 +629,7 @@ function updateShopUI() {
                     <button onclick="unequipAura()" style="font-size:10px; padding:2px 8px; border-color:#f55; color:#f58;">外す</button>
                 </div>`;
         } else {
-            char.auraId = null;
-            currentAuraZone.innerHTML = `<div class="current-aura-display" style="color:#888;">霊気: 未装着</div>`;
+            char.auraId = null; currentAuraZone.innerHTML = `<div class="current-aura-display" style="color:#888;">霊気: 未装着</div>`;
         }
     } else {
         currentAuraZone.innerHTML = `<div class="current-aura-display" style="color:#888;">霊気: 未装着</div>`;
@@ -663,23 +652,14 @@ function updateShopUI() {
 }
 
 function equipAura(auraId) {
-    const char = box.find(b => b.id === shopTargetId);
-    if (!char) return;
-    if (char.auraId) { unequipAura(false); }
-    char.auraId = auraId;
-    saveData();
-    updateShopUI();
+    const char = box.find(b => b.id === shopTargetId); if (!char) return;
+    if (char.auraId) unequipAura(false);
+    char.auraId = auraId; saveData(); updateShopUI();
 }
-
 function unequipAura(shouldRefresh = true) {
     const char = box.find(b => b.id === shopTargetId);
-    if (char) {
-        char.auraId = null;
-        saveData();
-        if (shouldRefresh) updateShopUI();
-    }
+    if (char) { char.auraId = null; saveData(); if (shouldRefresh) updateShopUI(); }
 }
-
 function applySeed(idx) {
     const char = box.find(b => b.id === shopTargetId);
     if(char) { char.skill = seeds[idx].name; char.cost = seeds[idx].cost; seeds.splice(idx, 1); saveData(); updateShopUI(); }
@@ -688,27 +668,19 @@ function applySeed(idx) {
 function extractSkill() {
     const char = box.find(b => b.id === shopTargetId);
     if (char && !char.special && confirm("消滅させますか？")) {
-        if (char.skill) { seeds.push({ name: char.skill, cost: char.cost || 1 }); }
-        char.auraId = null;
-        char.weaponId = null;
+        if (char.skill) seeds.push({ name: char.skill, cost: char.cost || 1 });
+        char.auraId = null; char.weaponId = null;
         box = box.filter(b => b.id !== shopTargetId); selectedIds = selectedIds.filter(sid => sid !== shopTargetId);
         saveData(); closeShop();
     }
 }
 
 function buyStat(s, cost) {
-    if (coins < cost) {
-        alert(`コインが不足しています！（必要コイン: ${cost}枚 / 所持コイン: ${coins}枚）`);
-        return;
-    }
-    coins -= cost;
-    box.find(b => b.id === shopTargetId)[s]++; 
-    updateShopUI(); 
-    saveData();
+    if (coins < cost) { alert(`コインが不足しています！`); return; }
+    coins -= cost; box.find(b => b.id === shopTargetId)[s]++; updateShopUI(); saveData();
 }
 
-let party = [], enemies = [], stage = 1, queue = [], qIdx = 0, isSelecting = false, currentAction = null;
-let remainingActions = 0; 
+let party = [], enemies = [], stage = 1, queue = [], qIdx = 0, isSelecting = false, currentAction = null, remainingActions = 0; 
 
 function getEquippedAura(unitBoxData) {
     if (!unitBoxData || !unitBoxData.auraId) return null;
@@ -720,11 +692,8 @@ function startGame() {
     party = selectedIds.map(sid => { 
         const c = box.find(b => b.id === sid); 
         const aura = getEquippedAura(c);
-        // 通常の出撃時にも武器（鉄の剣）の補正を適用
         let wpBonus = 0;
-        if (c.weaponId && weapons.some(w => w.id === c.weaponId)) {
-            wpBonus = 2;
-        }
+        if (c.weaponId && weapons.some(w => w.id === c.weaponId)) wpBonus = 2;
         return {...c, curH: c.h, maxH: c.h, curM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
     });
     stage = 1; document.getElementById('view-home').classList.remove('active'); document.getElementById('view-battle').classList.add('active');
@@ -737,11 +706,8 @@ function startBossBattle(name) {
     party = selectedIds.map(sid => { 
         const c = box.find(b => b.id === sid); 
         const aura = getEquippedAura(c);
-        // 強者戦にも武器（鉄の剣）の補正を適用
         let wpBonus = 0;
-        if (c.weaponId && weapons.some(w => w.id === c.weaponId)) {
-            wpBonus = 2;
-        }
+        if (c.weaponId && weapons.some(w => w.id === c.weaponId)) wpBonus = 2;
         return {...c, curH: c.h, maxH: c.h, curM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura}; 
     });
     document.getElementById('view-boss-select').classList.remove('active');
@@ -790,10 +756,7 @@ function cycle() {
             }
         }
     });
-    updateUI();
-
-    remainingActions = 0;
-    turn();
+    updateUI(); remainingActions = 0; turn();
 }
 
 async function turn() {
@@ -806,11 +769,8 @@ async function turn() {
             let bonus = u.aura.value; 
             if (u.aura.r === 2) bonus = Math.random() < 0.5 ? 1 : 2;
             if (u.aura.r === 4) bonus = Math.random() < 0.5 ? 2 : 3;
-            
             remainingActions = bonus;
-            if (remainingActions > 1) {
-                addLog("⚡【行動力】" + u.name + "は研ぎ澄まされている！（残り行動: " + remainingActions + "回）");
-            }
+            if (remainingActions > 1) addLog("⚡【行動力】" + u.name + "は研ぎ澄まされている！（残り行動: " + remainingActions + "回）");
         }
     }
 
@@ -828,13 +788,14 @@ async function turn() {
         document.getElementById('btn-atk').disabled = false; 
         document.getElementById('btn-skl').disabled = !u.skill || u.skill === '再生'; 
     } else {
-        document.getElementById('btn-atk').disabled = true; 
-        document.getElementById('btn-skl').disabled = true;
+        document.getElementById('btn-atk').disabled = true; document.getElementById('btn-skl').disabled = true;
         await new Promise(r => setTimeout(r, 600));
         const t_list = party.filter(p => p.curH > 0);
         if (t_list.length > 0) {
-            if ((u.skill === '感電' || u.skill === '咆哮' || u.skill === '毒牙' || u.skill === '丸呑み') && u.curM >= u.cost) executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'skill');
-            else executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'attack');
+            const hasAoE = (u.skill === '感電' || u.skill === '咆哮' || u.skill === '鱗粉' || u.skill === '御廚子');
+            if ((hasAoE || u.skill === '毒牙' || u.skill === '丸呑み' || u.skill === '連撃' || u.skill === 'イーター') && u.curM >= u.cost) {
+                executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'skill');
+            } else executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'attack');
         } else next();
     }
 }
@@ -842,11 +803,11 @@ async function turn() {
 function startTargetSelection(type) {
     const u = queue[qIdx];
     if (type === 'skill' && u.curM < u.cost) { addLog("MP不足！"); return; }
-    if (type === 'skill' && (u.skill === '感電' || u.skill === '咆哮' || u.skill === '鱗粉')) { executeAction(u, null, 'skill'); return; }
-    isSelecting = true; currentAction = type;
-    addLog(type === 'attack' ? "標的を選択" : "対象を選択");
-    updateUI();
+    const isAoE = (u.skill === '感電' || u.skill === '咆哮' || u.skill === '鱗粉' || u.skill === '御廚子');
+    if (type === 'skill' && isAoE) { executeAction(u, null, 'skill'); return; }
+    isSelecting = true; currentAction = type; addLog(type === 'attack' ? "標的を選択" : "対象を選択"); updateUI();
 }
+
 function onUnitClick(targetId) {
     if (!isSelecting) return;
     const target = [...party, ...enemies].find(char => char.id === targetId);
@@ -858,32 +819,32 @@ function onUnitClick(targetId) {
 function executeAction(u, t, type) {
     if (type === 'attack') {
         if (t.aura && t.aura.type === '回避') {
-            const dodgeChance = t.aura.value;
-            if (Math.random() * 100 < dodgeChance) {
-                addLog("💨【回避】" + t.name + "は攻撃を完全に避けた！");
-                next();
-                return;
-            }
+            if (Math.random() * 100 < t.aura.value) { addLog("💨【回避】" + t.name + "は攻撃を完全に避けた！"); next(); return; }
         }
-
-        let dmg = u.p;
-        let isCrit = false;
+        let dmg = u.p; let isCrit = false;
         if (u.aura && u.aura.type === '会心') {
-            const SchuylerChance = u.aura.value;
-            if (Math.random() * 100 < SchuylerChance) {
-                dmg = dmg * 2;
-                isCrit = true;
-            }
+            if (Math.random() * 100 < u.aura.value) { dmg = dmg * 2; isCrit = true; }
         }
-
         if (t.guard) dmg = 1;
-        t.curH = Math.max(0, t.curH - dmg); t.lastDmg = dmg;
+        t.curH = Math.max(0, t.curH - dmg); u.lastDmg = dmg;
         if (isCrit) addLog("💥【会心】" + u.name + "の一撃：" + dmg + "ダメ");
         else addLog(u.name + "の攻撃：" + dmg + "ダメ");
     } else {
         u.curM -= u.cost; addLog(u.name + "：【" + u.skill + "】");
         const targets = u.isP ? enemies : party;
+        
         if (u.skill === '感電') { targets.forEach(e => { if(e.curH>0) e.curH = Math.max(0, e.curH - 3); }); }
+        else if (u.skill === '御廚子') { targets.forEach(e => { if(e.curH>0) e.curH = Math.max(0, e.curH - 30); }); addLog("領域展開。全体に30の固定ダメージ！"); }
+        else if (u.skill === '連撃') {
+            let d1 = u.p; t.curH = Math.max(0, t.curH - d1);
+            let d2 = u.p; t.curH = Math.max(0, t.curH - d2);
+            u.lastDmg = d1 + d2;
+            addLog(`連続の斬撃！ ${t.name}に ${d1}、${d2} の連続ダメージ！`);
+        }
+        else if (u.skill === 'イーター') {
+            t.curH = Math.max(0, t.curH - 30); u.curH = Math.min(u.maxH, u.curH + 30);
+            addLog(`${t.name}から魂を喰らう！ 30ダメ与えて、自身は30回復！`);
+        }
         else if (u.skill === '魅了') { t.charm = 2; addLog(t.name + "を魅了！"); }
         else if (u.skill === '吸血') { u.curH = Math.min(u.maxH, u.curH + 3); }
         else if (u.skill === '血欲') { t.curH = Math.max(0, t.curH - 2); u.curH = Math.min(u.maxH, u.curH + 2); }
@@ -915,20 +876,11 @@ function next() {
             }
             saveData(); setTimeout(()=>location.reload(), 1500);
         } else if (isDigMode) {
-            // 発掘モードの報酬処理（コインは獲得せず、鉄の剣のみを獲得）
-            const newWeapon = {
-                id: Math.random(),
-                name: "鉄の剣",
-                pBonus: 2
-            };
+            const newWeapon = { id: Math.random(), name: "鉄の剣", pBonus: 2 };
             weapons.push(newWeapon);
-            
-            addLog(`秘宝発掘成功！`);
-            addLog(`⚔️宝箱から装具【鉄の剣】(攻撃力+2) を獲得した！`);
-            saveData(); 
-            setTimeout(() => location.reload(), 3000);
+            addLog(`秘宝発掘成功！`); addLog(`⚔️宝箱から装具【鉄の剣】(攻撃力+2) を獲得した！`);
+            saveData(); setTimeout(() => location.reload(), 3000);
         } else {
-            // バトル報酬（段階別調整）
             let reward = 1;
             if (stage >= 1 && stage <= 10) reward = 1;
             else if (stage >= 11 && stage <= 20) reward = 2;
@@ -937,14 +889,10 @@ function next() {
             else if (stage >= 51) reward = 5;
 
             coins += reward;
-            
             const coinCountEl = document.getElementById('global-coin-count');
-            if (coinCountEl) {
-                coinCountEl.innerText = coins;
-            }
+            if (coinCountEl) coinCountEl.innerText = coins;
 
             addLog(`勝利報酬としてコインを ${reward} 枚獲得！`);
-            
             saveData(); stage++; setTimeout(initBattle, 800);
         }
         return; 
@@ -953,11 +901,9 @@ function next() {
 
     remainingActions--;
     if (remainingActions > 0 && queue[qIdx] && queue[qIdx].curH > 0) {
-        addLog("⚡ 連撃発動！（残り行動: " + remainingActions + "回）");
-        turn();
+        addLog("⚡ 連撃発動！（残り行動: " + remainingActions + "回）"); turn();
     } else {
-        remainingActions = 0;
-        qIdx++; 
+        remainingActions = 0; qIdx++; 
         if (qIdx >= queue.length) cycle(); else turn();
     }
 }
@@ -969,9 +915,7 @@ function updateUI() {
         if (isSelecting) classes += ' selectable';
         
         let auraClass = "";
-        if (u.curH > 0 && u.aura && u.aura.type) {
-            auraClass = `glow-${u.aura.type}`;
-        }
+        if (u.curH > 0 && u.aura && u.aura.type) auraClass = `glow-${u.aura.type}`;
         let kanjiClass = `kanji ${auraClass}`;
         
         let overrideColor = "";
@@ -990,14 +934,12 @@ function updateUI() {
 }
 function addLog(m) { const l = document.getElementById('log'); l.innerText += m + "\n"; l.scrollTop = l.scrollHeight; }
 
-// データのロード
 if (!loadData()) { 
     ['蟻','蝿','蛆'].forEach(n => { 
         const b = charData.find(c => c.name === n); if(b) box.push({...b, id: Math.random(), auraId: null, weaponId: null}); 
     });
     saveData();
 }
-
 updateHomeUI();
 </script>
 </body>
