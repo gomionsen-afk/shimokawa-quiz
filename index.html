@@ -187,10 +187,10 @@
         <div id="weapon-upgrade-zone" class="w-upgrade-zone"></div>
 
         <div class="buy-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-            <button class="buy-btn" onclick="buyStat('p', 1000)">攻撃+1<span>(1000枚)</span></button>
-            <button class="buy-btn" onclick="buyStat('h', 1000)">HP+1<span>(1000枚)</span></button>
-            <button class="buy-btn" onclick="buyStat('s', 1500)">速さ+1<span>(1500枚)</span></button>
-            <button class="buy-btn" onclick="buyStat('m', 2000)">MP+1<span>(2000枚)</span></button>
+            <button class="buy-btn" onclick="buyStat('p', 300)">攻撃+1<span>(300枚)</span></button>
+            <button class="buy-btn" onclick="buyStat('h', 300)">HP+1<span>(300枚)</span></button>
+            <button class="buy-btn" onclick="buyStat('s', 500)">速さ+1<span>(500枚)</span></button>
+            <button class="buy-btn" onclick="buyStat('m', 800)">MP+1<span>(800枚)</span></button>
         </div>
         
         <div class="section-title" id="shop-sub-title">【装備可能なオーラ一覧】</div>
@@ -243,14 +243,6 @@ const charData = [
     { name: '火竜', r: 5, p: 22, h: 30, m: 10, s: 12, skill: "炎のブレス", cost: 10 },
     { name: '不死鳥', r: 5, p: 18, h: 25, m: 0, s: 18, skill: "不死の再生", cost: 0, special: true },
     { name: '天照', r: 5, p: 30, h: 35, m: 20, s: 8, skill: "神の審判", cost: 10 }
-    { name: '埼玉', r: 6, p: 40, h: 35, m: 0, s: 10 }
-　  { name: '宿灘', r: 6, p: 35, h: 38, m: 20, s: 15 }
-    { name: '鋏虫', r: 2, p: 3, h: 4, m: 0, s: 5 }
-    { name: '赤蟻', r: 1, p: 2, h: 3, m: 0, s: 3 }
-    { name: '猿', r: 3, p: 5, h: 6, m: 0, s: 10 }
-    { name: '竈馬', r: 2, p: 2, h: 6, m: 0, s: 6 }
-    { name: '鬼鮫', r: 5, p: 20, h: 30, m: 0, s: 15 }
-    { name: '霊', r: 4, p: 18, h: 10, m: 0, s: 20 }
 ];
 
 const auraTypes = ['回避', '行動力', '会心', '回復'];
@@ -405,8 +397,8 @@ function sellSelectedUnit() {
     const char = box.find(b => b.id === targetId);
     
     if (!char) return;
-    if (box.length <= 3) {
-        alert("最後の3体は売却（お別れ）できません。");
+    if (box.length <= 1) {
+        alert("最後の1体は売却（お別れ）できません。");
         return;
     }
     
