@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字RPG - 零 - 完全版（武器強化システム搭載）</title>
+    <title>漢字RPG - 零 - 完全版（ステージ選択・武器強化システム搭載）</title>
     <style>
         /* 画面全体の縦固定を解除し、自然なスクロールを許可 */
         body { background: #000; color: #fff; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 10px 0; box-sizing: border-box; }
@@ -43,8 +43,8 @@
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; height: 55px; flex-shrink: 0; }
         button { background: #000; color: #fff; border: 1px solid #fff; cursor: pointer; font-family: inherit; font-size: 15px; }
         button:disabled { border-color: #333; color: #444; cursor: not-allowed; }
-        .gacha-btn { background: #202; border-color: #a0a; font-size: 11px; line-height: 1.2; }
-        .gacha-btn span { display: block; font-size: 8px; color: #d0d; }
+        .gacha-btn { background: #202; border-color: #a0a; font-size: 10px; line-height: 1.2; padding: 2px 1px; }
+        .gacha-btn span { display: block; font-size: 7px; color: #d0d; }
         .boss-btn { background: #300; border-color: #f00; }
         .dig-btn { background: #220; border-color: #aa0; color: #ff0; } /* 発掘ボタン用スタイル */
         .exit-btn { background: #222; color: #fff; border: 1px solid #666; font-size: 10px; padding: 2px 8px; height: 24px; cursor: pointer; border-radius: 3px; }
@@ -64,8 +64,8 @@
         .gacha-res-item { width: 60px; height: 60px; background: #111; border: 1px solid #444; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 16px; position: relative; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        .aura-btn { background: #033; border-color: #0aa; font-size: 11px; line-height: 1.2; }
-        .aura-btn span { display: block; font-size: 8px; color: #0cc; }
+        .aura-btn { background: #033; border-color: #0aa; font-size: 10px; line-height: 1.2; padding: 2px 1px; }
+        .aura-btn span { display: block; font-size: 7px; color: #0cc; }
         .section-title { font-size: 11px; color: #0cc; margin: 4px 0 2px 0; padding-left: 4px; text-align: left; width: 100%; }
         .aura-item { font-size: 11px !important; line-height: 1.2; border-color: #088 !important; }
         .aura-item .aura-type { font-size: 14px; font-weight: bold; color: #0ff; }
@@ -123,6 +123,12 @@
         .w-upgrade-zone { border: 1px solid #770; background: #110; padding: 6px; margin: 5px 0; font-size: 11px; text-align: left; box-sizing: border-box; }
         .w-upgrade-btn { background: #330; border: 1px solid #ff0; color: #ff0; padding: 4px 10px; font-size: 11px; cursor: pointer; margin-top: 5px; width: 100%; box-sizing: border-box; font-family: inherit; }
         .w-upgrade-btn:disabled { background: #111; border-color: #444; color: #666; cursor: not-allowed; }
+
+        /* ステージ選択用スタイル */
+        .stage-select-btn { width: 100%; height: 45px; text-align: left; padding-left: 15px; margin-bottom: 8px; font-size: 14px; position: relative; }
+        .stage-select-btn.locked { border-color: #333; color: #555; cursor: not-allowed; background: #050505; }
+        .stage-select-btn .lock-text { position: absolute; right: 15px; font-size: 10px; color: #f33; }
+        .stage-select-btn .clear-text { position: absolute; right: 15px; font-size: 10px; color: #0f0; }
     </style>
 </head>
 <body>
@@ -163,13 +169,23 @@
         <div class="section-title">【所持している装具（武器）】</div>
         <div id="weapon-box" class="box-list" style="max-height: 130px; overflow-y: auto;"></div>
 
-        <div class="controls" style="grid-template-columns: repeat(6, 1fr); height: 50px; margin-top: 10px; gap: 4px;">
-            <button class="gacha-btn" onclick="playGacha(1)">単発<span>(10枚)</span></button>
-            <button class="gacha-btn" onclick="playGacha(10)">10連<span>(100枚)</span></button>
-            <button class="aura-btn" onclick="playAuraGacha()">霊気<span>(30枚)</span></button>
-            <button class="boss-btn" onclick="openBossSelection()">強者</button>
-            <button class="dig-btn" onclick="startDigMode()">発掘</button> <button id="btn-start" onclick="startGame()">出撃</button>
+        <div class="controls" style="grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); height: 85px; margin-top: 10px; gap: 4px;">
+            <button class="gacha-btn" onclick="playGacha(1)">通常単発<span>(10枚)</span></button>
+            <button class="gacha-btn" onclick="playGacha(10)">通常10連<span>(100枚)</span></button>
+            <button class="gacha-btn" style="background:#402; border-color:#d0d;" onclick="playPremiumGacha(1)">上級単発<span>(100枚)</span></button>
+            <button class="gacha-btn" style="background:#503; border-color:#f0f;" onclick="playPremiumGacha(10)">上級10連<span>(1000枚)</span></button>
+            <button class="aura-btn" onclick="playAuraGacha()">霊気ガチャ<span>(30枚)</span></button>
+            <button class="boss-btn" onclick="openBossSelection()">強者の間</button>
+            <button class="dig-btn" onclick="startDigMode()">発掘開始</button>
+            <button id="btn-start" onclick="openStageSelection()">戦場出撃</button>
         </div>
+    </div>
+
+    <div id="view-stage-select" class="view">
+        <h2>作戦領域選択</h2>
+        <div class="guide-text" style="margin-bottom: 15px;">※現在の最高クリア階層によって新たな領域が解放されます。</div>
+        <div id="stage-select-list" style="display: flex; flex-direction: column;"></div>
+        <button onclick="closeStageSelection()" style="height:45px; margin-top:15px;">拠点に戻る</button>
     </div>
 
     <div id="view-boss-select" class="view">
@@ -205,7 +221,7 @@
         <div id="enemy-area" class="unit-area"></div>
         <div id="log"></div>
         <div id="player-area" class="unit-area"></div>
-        <div class="controls" style="margin-top:5px;">
+        <div class="controls" style="margin-top:5px; grid-template-columns: 1fr 1fr;">
             <button id="btn-atk" onclick="startTargetSelection('attack')">たたかう</button>
             <button id="btn-skl" onclick="startTargetSelection('skill')">スキル</button>
         </div>
@@ -259,7 +275,7 @@ const stageBaseData = [
     ['大雀蜂', '梟'], ['大王烏賊', '達磨'], ['火竜', '龍'], ['不死鳥', '天照'], ['死神', '鳳']
 ];
 
-// 【強者の間のボスリスト】「宿灘」と「埼玉」を除外
+// 【強者の間のボスリスト】
 const bossListData = ['雷鰻', '王蛇', '大雀蜂', '大王烏賊', '達磨', '火竜', '不死鳥', '天照'];
 
 // 武器の強化段階データ
@@ -270,21 +286,18 @@ const weaponUpgradeSpecs = [
     { name: "鉄の剣+3", nextName: "鉄の剣+4", rate: 15, pBonus: 8 },
     { name: "鉄の剣+4", nextName: "グレイデンの剣", rate: 8, pBonus: 10 },
     { name: "グレイデンの剣", nextName: "極・グレイデンの剣", rate: 4, pBonus: 15 },
-    { name: "極・グレイデンの剣", nextName: null, rate: 0, pBonus: 20 } // 最終形態
+    { name: "極・グレイデンの剣", nextName: null, rate: 0, pBonus: 20 }
 ];
 
-// 武器名から現在のボーナスを取得するヘルパー関数
 function getWeaponBonus(wName) {
     const spec = weaponUpgradeSpecs.find(s => s.name === wName);
     return spec ? spec.pBonus : 2;
 }
 
-// 武器名から次の強化段階情報を取得する関数
 function getNextUpgradeInfo(wName) {
     return weaponUpgradeSpecs.find(s => s.name === wName) || null;
 }
 
-// 各ボスの体力倍率設定
 function getBossHpMultiplier(name) {
     if (name === '大雀蜂') return 4;
     if (name === '大王烏賊') return 6;
@@ -292,14 +305,16 @@ function getBossHpMultiplier(name) {
     if (name === '火竜') return 15;
     if (name === '不死鳥') return 20;
     if (name === '天照') return 30;
-    return 3; // 従来のボスは一律3倍
+    return 3;
 }
 
-let coins = 0, stones = 0, box = [], selectedIds = [], seeds = [], auras = [], weapons = [], isFreeGachaAvailable = true, shopTargetId = null;
+let coins = 0, stones = 0, box = [], selectedIds = [], seeds = [], auras = [], weapons = [], shopTargetId = null;
 let isBossMode = false, currentBossName = null;
 let isDigMode = false; 
+let maxClearedStage = 0; 
+let currentEndStage = 50; 
 
-function saveData() { localStorage.setItem('kanji_rpg_AURA_TYPE_GLOW', JSON.stringify({ coins, stones, box, selectedIds, seeds, auras, weapons, isFreeGachaAvailable })); }
+function saveData() { localStorage.setItem('kanji_rpg_AURA_TYPE_GLOW', JSON.stringify({ coins, stones, box, selectedIds, seeds, auras, weapons, maxClearedStage })); }
 function loadData() {
     const saved = localStorage.getItem('kanji_rpg_AURA_TYPE_GLOW');
     if (saved) {
@@ -311,7 +326,7 @@ function loadData() {
         seeds = d.seeds || [];
         auras = d.auras || [];
         weapons = d.weapons || []; 
-        isFreeGachaAvailable = true;
+        maxClearedStage = d.maxClearedStage || 0;
         return true;
     } return false;
 }
@@ -330,7 +345,6 @@ function updateHomeUI() {
         if (c.weaponId) {
             const wp = weapons.find(w => w.id === c.weaponId);
             if (wp) {
-                // 強化段階に応じて表示文字を切り替える
                 let label = "剣";
                 if (wp.name.includes("+")) label = wp.name.split("の剣")[1] || "剣";
                 if (wp.name === "グレイデンの剣") label = "霊剣";
@@ -392,16 +406,13 @@ function updateHomeUI() {
 
 function sellSelectedUnit() {
     if (selectedIds.length === 0) return;
-    
     const targetId = selectedIds[selectedIds.length - 1];
     const char = box.find(b => b.id === targetId);
-    
     if (!char) return;
     if (box.length <= 1) {
         alert("最後の1体は売却（お別れ）できません。");
         return;
     }
-    
     let rewardCoin = 1;
     if (char.r === 2) rewardCoin = 2;
     else if (char.r === 3) rewardCoin = 3;
@@ -413,12 +424,9 @@ function sellSelectedUnit() {
         coins += rewardCoin;
         char.auraId = null;
         char.weaponId = null;
-
         box = box.filter(b => b.id !== targetId);
         selectedIds = selectedIds.filter(sid => sid !== targetId);
-        
-        saveData();
-        updateHomeUI();
+        saveData(); updateHomeUI();
         alert(`${char.name} とお別れし、コインを ${rewardCoin} 枚獲得しました。`);
     }
 }
@@ -430,16 +438,13 @@ function attachSeedFromHome(seedIndex) {
     }
     const targetId = selectedIds[selectedIds.length - 1];
     const char = box.find(b => b.id === targetId);
-    
     if (char) {
         const seed = seeds[seedIndex];
         const oldSkill = char.skill;
         if (oldSkill && !confirm(`既にスキル【${oldSkill}】を持っています。上書きして【${seed.name}】を習得させますか？`)) return;
-        
         char.skill = seed.name;
         char.cost = seed.cost || 1;
         seeds.splice(seedIndex, 1);
-        
         alert(`${char.name} に 【${seed.name}】 のスキルを付与しました！`);
         saveData(); updateHomeUI();
     }
@@ -517,7 +522,6 @@ function playGacha(times) {
             
             if (count > 12) {
                 clearInterval(interval);
-                
                 let selectedRarity = 1;
                 const roll = Math.random() * 100;
 
@@ -566,6 +570,79 @@ function playGacha(times) {
         }, 30);
     };
     pullNext();
+}
+
+/* 上級ガチャシステム（単発 / 10連 両対応） */
+function playPremiumGacha(times) {
+    const cost = times === 10 ? 1000 : 100;
+    if (coins < cost) {
+        alert(`コインが不足しています！（必要コイン: ${cost}枚 / 所持コイン: ${coins}枚）`);
+        return;
+    }
+    coins -= cost;
+    document.getElementById('global-coin-count').innerText = coins;
+
+    const overlay = document.getElementById('gacha-overlay');
+    const display = document.getElementById('gacha-kanji-display');
+    const resultName = document.getElementById('gacha-result-name');
+    const resultList = document.getElementById('gacha-result-list');
+    const closeBtn = document.getElementById('gacha-close-btn');
+    
+    overlay.style.display = 'flex';
+    closeBtn.style.display = 'none';
+    resultName.innerText = "";
+    resultList.innerHTML = "";
+    display.className = "";
+    display.style.display = 'block';
+
+    let currentPull = 0;
+
+    const pullNextPremium = () => {
+        if (currentPull >= times) {
+            display.style.display = 'none';
+            resultName.innerText = "── 上級召喚結果 ──";
+            closeBtn.style.display = 'block';
+            saveData(); return;
+        }
+
+        let count = 0;
+        resultName.innerText = `${currentPull + 1} 体目の高位召喚中...`;
+
+        const interval = setInterval(() => {
+            display.innerText = charData[Math.floor(Math.random() * charData.length)].name;
+            count++;
+            if (count > 15) {
+                clearInterval(interval);
+                let selectedRarity = 4;
+                const roll = Math.random() * 100;
+                if (roll < 75.0) selectedRarity = 4;
+                else if (roll < 75.0 + 20.0) selectedRarity = 5;
+                else selectedRarity = 6;
+
+                const pool = charData.filter(c => c.r === selectedRarity);
+                const base = pool[Math.floor(Math.random() * pool.length)];
+                const newUnit = {...base, id: Math.random(), auraId: null, weaponId: null};
+                box.push(newUnit);
+
+                display.innerText = base.name;
+                display.className = "";
+                if (base.r === 6) display.classList.add('rarity-god');
+                else display.classList.add('rarity-high');
+
+                let borderCol = base.r === 6 ? '#f0f' : '#ff0';
+                resultList.innerHTML += `
+                    <div class="gacha-res-item" style="color:${base.r===6?'#f0f':'#ff0'}; border-color:${borderCol}">
+                        <span class="rarity">${'★'.repeat(base.r)}</span>
+                        ${base.name}
+                    </div>
+                `;
+
+                currentPull++;
+                setTimeout(pullNextPremium, 200);
+            }
+        }, 40);
+    };
+    pullNextPremium();
 }
 
 function playAuraGacha() {
@@ -629,6 +706,68 @@ function playAuraGacha() {
 
 function closeGachaEffect() { document.getElementById('gacha-overlay').style.display = 'none'; updateHomeUI(); }
 
+function openStageSelection() {
+    if (selectedIds.length === 0) return alert("メンバーを選んでください");
+    document.getElementById('view-home').classList.remove('active');
+    document.getElementById('view-stage-select').classList.add('active');
+    
+    const container = document.getElementById('stage-select-list');
+    const stagesDef = [
+        { start: 1, end: 50, req: 0, label: "黎明の領域 (第 1～50 層)" },
+        { start: 51, end: 100, req: 50, label: "深層の領域 (第 51～100 層)" },
+        { start: 101, end: 200, req: 100, label: "狂気の領域 (第 101～200 層)" },
+        { start: 201, end: 300, req: 200, label: "虚無の領域 (第 201～300 層)" }
+    ];
+    
+    container.innerHTML = stagesDef.map(st => {
+        const isLocked = maxClearedStage < st.req;
+        const isCleared = maxClearedStage >= st.end;
+        
+        if (isLocked) {
+            return `<button class="stage-select-btn locked" disabled>
+                ${st.label}
+                <span class="lock-text">🔒 要:${st.req}層クリア</span>
+            </button>`;
+        } else {
+            return `<button class="stage-select-btn" onclick="selectStageRange(${st.start}, ${st.end})">
+                ${st.label}
+                ${isCleared ? '<span class="clear-text">★ 制覇済</span>' : '<span class="clear-text" style="color:#ff0;">▶ 挑戦可能</span>'}
+            </button>`;
+        }
+    }).join('');
+}
+
+function closeStageSelection() {
+    document.getElementById('view-stage-select').classList.remove('active');
+    document.getElementById('view-home').classList.add('active');
+}
+
+function selectStageRange(start, end) {
+    document.getElementById('view-stage-select').classList.remove('active');
+    document.getElementById('view-battle').classList.add('active');
+    document.getElementById('btn-retreat').style.display = "block";
+    
+    isBossMode = false; 
+    isDigMode = false; 
+    remainingActions = 0; 
+    darumaTrigger = null;
+    
+    party = selectedIds.map(sid => { 
+        const c = box.find(b => b.id === sid); 
+        const aura = getEquippedAura(c);
+        let wpBonus = 0;
+        if (c.weaponId) {
+            const wp = weapons.find(w => w.id === c.weaponId);
+            if (wp) wpBonus = getWeaponBonus(wp.name);
+        }
+        return {...c, curH: c.h, maxH: c.h, curM: c.m, maxM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura, usedPhoenix: false}; 
+    });
+    
+    stage = start;
+    currentEndStage = end;
+    initBattle();
+}
+
 function openBossSelection() {
     if (selectedIds.length === 0) return alert("メンバーを選んでください");
     document.getElementById('view-home').classList.remove('active');
@@ -642,6 +781,34 @@ function openBossSelection() {
     }).join('');
 }
 function closeBossSelection() { document.getElementById('view-boss-select').classList.remove('active'); document.getElementById('view-home').classList.add('active'); }
+
+function startBossBattle(name) {
+    document.getElementById('view-boss-select').classList.remove('active');
+    document.getElementById('view-battle').classList.add('active');
+    document.getElementById('btn-retreat').style.display = "block";
+    
+    isBossMode = true; currentBossName = name; isDigMode = false; remainingActions = 0; darumaTrigger = null;
+    document.getElementById('header-stage-label').innerText = `強者決戦`;
+    
+    party = selectedIds.map(sid => { 
+        const c = box.find(b => b.id === sid); 
+        const aura = getEquippedAura(c);
+        let wpBonus = 0;
+        if (c.weaponId) {
+            const wp = weapons.find(w => w.id === c.weaponId);
+            if (wp) wpBonus = getWeaponBonus(wp.name);
+        }
+        return {...c, curH: c.h, maxH: c.h, curM: c.m, maxM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura, usedPhoenix: false}; 
+    });
+
+    const base = charData.find(c => c.name === name);
+    const mult = getBossHpMultiplier(name);
+    enemies = [{...base, id: 999, curH: base.h * mult, maxH: base.h * mult, p: base.p, baseP: base.p, baseS: base.s, curM: base.m, maxM: base.m, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null, usedPhoenix: false}];
+    
+    document.getElementById('log').innerText = ""; 
+    addLog(`--- 凶悪なる強者【 ${name} 】が現れた！ ---`); 
+    cycle();
+}
 
 function startDigMode() {
     if (selectedIds.length === 0) return alert("メンバーを選んでください");
@@ -674,16 +841,10 @@ function closeShop() { document.getElementById('view-shop').classList.remove('ac
 
 function updateShopUI() {
     const char = box.find(b => b.id === shopTargetId); if(!char) return closeShop();
-    
-    // 現在装備中の武器ボーナスを考慮したステータス表示
     let wpBonus = 0;
-    let weaponNameDisplay = "なし";
     if (char.weaponId) {
         const wp = weapons.find(w => w.id === char.weaponId);
-        if (wp) {
-            wpBonus = getWeaponBonus(wp.name);
-            weaponNameDisplay = wp.name;
-        }
+        if (wp) wpBonus = getWeaponBonus(wp.name);
     }
     
     document.getElementById('shop-unit-detail').innerHTML = `
@@ -708,14 +869,12 @@ function updateShopUI() {
         currentAuraZone.innerHTML = `<div class="current-aura-display" style="color:#888;">霊気: 未装着</div>`;
     }
 
-    // 武器強化エリアの表示更新
     const upgradeZone = document.getElementById('weapon-upgrade-zone');
     if (char.weaponId) {
         const wp = weapons.find(w => w.id === char.weaponId);
         if (wp) {
             const upInfo = getNextUpgradeInfo(wp.name);
             if (upInfo && upInfo.nextName) {
-                // 強化可能な場合
                 const isBtnDisabled = stones < 1;
                 upgradeZone.innerHTML = `
                     <div style="color:#fff; font-weight:bold;">【武器強化の試練】</div>
@@ -725,7 +884,6 @@ function updateShopUI() {
                     <button class="w-upgrade-btn" ${isBtnDisabled ? 'disabled' : ''} onclick="executeWeaponUpgrade(${wp.id})">強化の試練を実行する</button>
                 `;
             } else {
-                // 最終形態の場合
                 upgradeZone.innerHTML = `
                     <div style="color:#fff; font-weight:bold;">【武器強化の試練】</div>
                     <div style="margin-top:2px; color:#ff0;">現在の装備: <span style="color:#f0f; font-weight:bold;">${wp.name}</span> (攻撃力+${wpBonus})</div>
@@ -756,7 +914,6 @@ function updateShopUI() {
     }
 }
 
-// 武器強化ロジック
 function executeWeaponUpgrade(weaponId) {
     if (stones < 1) {
         alert("強化石が不足しています。");
@@ -764,25 +921,19 @@ function executeWeaponUpgrade(weaponId) {
     }
     const wp = weapons.find(w => w.id === weaponId);
     if (!wp) return;
-
     const upInfo = getNextUpgradeInfo(wp.name);
     if (!upInfo || !upInfo.nextName) return;
 
-    stones -= 1; // 強化石消費
-    
+    stones -= 1;
     const roll = Math.random() * 100;
     if (roll < upInfo.rate) {
-        // 成功！名称を上書き
         const oldName = wp.name;
         wp.name = upInfo.nextName;
         alert(`✨強化成功！✨\n【${oldName}】は【${wp.name}】へと鍛え上げられた！`);
     } else {
-        // 失敗
         alert(`❌強化失敗...❌\n打ち付けた火花は虚しく散った。（武器は壊れませんでした）`);
     }
-
-    saveData();
-    updateShopUI();
+    saveData(); updateShopUI();
 }
 
 function equipAura(auraId) {
@@ -815,58 +966,23 @@ function buyStat(s, cost) {
 }
 
 let party = [], enemies = [], stage = 1, queue = [], qIdx = 0, isSelecting = false, currentAction = null, remainingActions = 0; 
-let darumaTrigger = null; // 「達磨さんが転んだ」の罠発動待機用（仕掛けた側の陣営を記憶）
+let darumaTrigger = null; 
 
 function getEquippedAura(unitBoxData) {
     if (!unitBoxData || !unitBoxData.auraId) return null;
     return auras.find(a => a.id === unitBoxData.auraId) || null;
 }
 
-function startGame() {
-    isBossMode = false; isDigMode = false; remainingActions = 0; darumaTrigger = null;
-    party = selectedIds.map(sid => { 
-        const c = box.find(b => b.id === sid); 
-        const aura = getEquippedAura(c);
-        let wpBonus = 0;
-        if (c.weaponId) {
-            const wp = weapons.find(w => w.id === c.weaponId);
-            if (wp) wpBonus = getWeaponBonus(wp.name);
-        }
-        return {...c, curH: c.h, maxH: c.h, curM: c.m, maxM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura, usedPhoenix: false}; 
-    });
-    stage = 1; document.getElementById('view-home').classList.remove('active'); document.getElementById('view-battle').classList.add('active');
-    document.getElementById('btn-retreat').style.display = "block";
-    initBattle();
-}
-
-function startBossBattle(name) {
-    isBossMode = true; isDigMode = false; currentBossName = name; remainingActions = 0; darumaTrigger = null;
-    party = selectedIds.map(sid => { 
-        const c = box.find(b => b.id === sid); 
-        const aura = getEquippedAura(c);
-        let wpBonus = 0;
-        if (c.weaponId) {
-            const wp = weapons.find(w => w.id === c.weaponId);
-            if (wp) wpBonus = getWeaponBonus(wp.name);
-        }
-        return {...c, curH: c.h, maxH: c.h, curM: c.m, maxM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura, usedPhoenix: false}; 
-    });
-    document.getElementById('view-boss-select').classList.remove('active');
-    document.getElementById('view-battle').classList.add('active');
-    document.getElementById('btn-retreat').style.display = "block";
-    document.getElementById('header-stage-label').innerText = `強者の間`;
-    
-    let base = charData.find(c => c.name === name);
-    // ボスごとの専用倍率を反映して体力を算出
-    const mult = getBossHpMultiplier(name);
-    const bossHp = base.h * mult;
-
-    enemies = [{...base, id: 999, curH: bossHp, maxH: bossHp, p: base.p, baseP: base.p, baseS: base.s, curM: base.m, maxM: base.m, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null, usedPhoenix: false}];
-    document.getElementById('log').innerText = ""; addLog(`--- 強者：${name} (${mult}倍) ---`); cycle();
-}
-
 function initBattle() {
-    if (stage > 50) { addLog("★完全踏破！★"); saveData(); setTimeout(()=>location.reload(), 2000); return; }
+    if (stage > currentEndStage) { 
+        addLog(`★第 ${currentEndStage} 層 領域制覇！★`);
+        if (stage - 1 > maxClearedStage) maxClearedStage = stage - 1;
+        saveData(); 
+        if (maxClearedStage >= 300) addLog("★前人未到の完全踏破を成し遂げた！★");
+        setTimeout(() => location.reload(), 2500); 
+        return; 
+    }
+    
     document.getElementById('header-stage-label').innerText = `第 ${stage} 層`;
     let enemyNames = stageBaseData[(stage-1) % stageBaseData.length];
     enemies = enemyNames.map((n, i) => {
@@ -879,9 +995,7 @@ function initBattle() {
 
 function checkAndRevivePhoenix(u) {
     if (u.curH <= 0 && (u.name === '不死鳥' || u.skill === '不死の再生') && !u.usedPhoenix) {
-        u.curH = u.maxH;
-        u.curM = u.maxM;
-        u.usedPhoenix = true;
+        u.curH = u.maxH; u.curM = u.maxM; u.usedPhoenix = true;
         addLog(`✨【不死の再生】${u.name}は炎を纏い、一度だけ完全復活した！`);
         return true;
     }
@@ -920,7 +1034,6 @@ async function turn() {
     isSelecting = false; currentAction = null; updateUI(); 
     const u = queue[qIdx]; if (!u || u.curH <= 0) return next();
     
-    // 達磨さんが転んだの罠判定（行動を開始したタイミングで、相手陣営の罠があれば発動）
     if (darumaTrigger !== null && darumaTrigger !== u.isP) {
         darumaTrigger = null; 
         u.curH = Math.max(0, u.curH - 20);
@@ -970,8 +1083,7 @@ function startTargetSelection(type) {
     const u = queue[qIdx];
     if (type === 'skill' && u.curM < u.cost) { addLog("MP不足！"); return; }
     const isAoE = (u.skill === '感電' || u.skill === '咆哮' || u.skill === '鱗粉' || u.skill === '御廚子' || u.skill === '巨大触手' || u.skill === '炎のブレス');
-    const isSelfOrGlobal = isAoE || (u.skill === '達磨さんが転んだ');
-    if (type === 'skill' && isSelfOrGlobal) { executeAction(u, null, 'skill'); return; }
+    if (type === 'skill' && (isAoE || u.skill === '達磨さんが転んだ')) { executeAction(u, null, 'skill'); return; }
     isSelecting = true; currentAction = type; addLog(type === 'attack' ? "標的を選択" : "対象を選択"); updateUI();
 }
 
@@ -1007,21 +1119,17 @@ function executeAction(u, t, type) {
         else if (u.skill === '炎のブレス') { targets.forEach(e => { if(e.curH>0) { e.curH = Math.max(0, e.curH - 20); checkAndRevivePhoenix(e); } }); addLog("灼熱の烈火が敵全体を包み込む！ 20ダメージ！"); }
         else if (u.skill === '達磨さんが転んだ') { darumaTrigger = u.isP; addLog("達磨がこちらを凝視している...（次に動いた敵へ罠発動）"); }
         else if (u.skill === '神の審判') {
-            const judgeDmg = Math.random() < 0.5 ? 10 : 60;
-            t.curH = Math.max(0, t.curH - judgeDmg);
-            addLog(`天からの光が差し込む！ ${t.name}に ${judgeDmg} の審判ダメージ！`);
-            checkAndRevivePhoenix(t);
+            const judgeDmg = Math.random() < 0.5 ? 10 : 60; t.curH = Math.max(0, t.curH - judgeDmg);
+            addLog(`天からの光が差し込む！ ${t.name}に ${judgeDmg} の審判ダメージ！`); checkAndRevivePhoenix(t);
         }
         else if (u.skill === '連撃') {
             let d1 = u.p; t.curH = Math.max(0, t.curH - d1); checkAndRevivePhoenix(t);
             let d2 = u.p; t.curH = Math.max(0, t.curH - d2); checkAndRevivePhoenix(t);
-            u.lastDmg = d1 + d2;
-            addLog(`連続の斬撃！ ${t.name}に ${d1}、${d2} の連続ダメージ！`);
+            u.lastDmg = d1 + d2; addLog(`連続の斬撃！ ${t.name}に ${d1}、${d2} の連続ダメージ！`);
         }
         else if (u.skill === 'イーター') {
             t.curH = Math.max(0, t.curH - 30); u.curH = Math.min(u.maxH, u.curH + 30);
-            addLog(`${t.name}から魂を喰らう！ 30ダメ与えて、自身は30回復！`);
-            checkAndRevivePhoenix(t);
+            addLog(`${t.name}から魂を喰らう！ 30ダメ与えて、自身は30回復！`); checkAndRevivePhoenix(t);
         }
         else if (u.skill === '魅了') { t.charm = 2; addLog(t.name + "を魅了！"); }
         else if (u.skill === '吸血') { u.curH = Math.min(u.maxH, u.curH + 3); }
@@ -1056,14 +1164,8 @@ function next() {
         } else if (isDigMode) {
             const newWeapon = { id: Math.random(), name: "鉄の剣" };
             weapons.push(newWeapon);
-            addLog(`秘宝発掘成功！`); addLog(`⚔️宝箱から装具【鉄の剣】(攻撃力+2) を獲得した！`);
-            
-            // 20%の確率で強化石をドロップ
-            if (Math.random() < 0.20) {
-                stones += 1;
-                addLog(`💎さらに、きらめく【強化石】を1個手に入れた！`);
-            }
-            
+            addLog(`秘宝発掘成功！⚔️宝箱から装具【鉄の剣】を獲得した！`);
+            if (Math.random() < 0.20) { stones += 1; addLog(`💎さらに【強化石】を1個手に入れた！`); }
             saveData(); setTimeout(() => location.reload(), 3000);
         } else {
             let reward = 1;
@@ -1071,13 +1173,16 @@ function next() {
             else if (stage >= 11 && stage <= 20) reward = 2;
             else if (stage >= 21 && stage <= 30) reward = 3;
             else if (stage >= 31 && stage <= 50) reward = 4;
-            else if (stage >= 51) reward = 5;
+            else if (stage >= 51 && stage <= 100) reward = 5;
+            else if (stage >= 101 && stage <= 200) reward = 8;
+            else if (stage >= 201) reward = 12;
 
             coins += reward;
             const coinCountEl = document.getElementById('global-coin-count');
             if (coinCountEl) coinCountEl.innerText = coins;
-
             addLog(`勝利報酬としてコインを ${reward} 枚獲得！`);
+            
+            if (stage > maxClearedStage) maxClearedStage = stage;
             saveData(); stage++; setTimeout(initBattle, 800);
         }
         return; 
@@ -1098,11 +1203,9 @@ function updateUI() {
     const draw = (u) => {
         let classes = `char-box ${u.curH<=0?'dead':''} ${activeUnit && u.id===activeUnit.id?'active-unit':''}`;
         if (isSelecting) classes += ' selectable';
-        
         let auraClass = "";
         if (u.curH > 0 && u.aura && u.aura.type) auraClass = `glow-${u.aura.type}`;
         let kanjiClass = `kanji ${auraClass}`;
-        
         let overrideColor = "";
         if (u.charm > 0) overrideColor = "color:#f0f;";
         else if (u.poison) overrideColor = "color:#0f0;";
@@ -1123,7 +1226,7 @@ if (!loadData()) {
     ['蟻','蝿','蛆'].forEach(n => { 
         const b = charData.find(c => c.name === n); if(b) box.push({...b, id: Math.random(), auraId: null, weaponId: null}); 
     });
-    saveData();
+    maxClearedStage = 0; saveData();
 }
 updateHomeUI();
 </script>
