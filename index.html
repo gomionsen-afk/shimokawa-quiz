@@ -125,7 +125,7 @@
         .w-upgrade-btn:disabled { background: #111; border-color: #444; color: #666; cursor: not-allowed; }
 
         /* ステージ選択用スタイル */
-        .stage-select-btn { width: 100%; height: 45px; text-align: left; padding-left: 15px; margin-bottom: 8px; font-size: 14px; position: relative; }
+        .stage-select-btn { width: 100%; height: 45px; text-align: left; padding-left: 15px; margin-bottom: 8px; font-size: 14px; position: relative; cursor: pointer;}
         .stage-select-btn.locked { border-color: #333; color: #555; cursor: not-allowed; background: #050505; }
         .stage-select-btn .lock-text { position: absolute; right: 15px; font-size: 10px; color: #f33; }
         .stage-select-btn .clear-text { position: absolute; right: 15px; font-size: 10px; color: #0f0; }
@@ -176,7 +176,7 @@
             <button class="gacha-btn" style="background:#503; border-color:#f0f;" onclick="playPremiumGacha(10)">上級10連<span>(1000枚)</span></button>
             <button class="aura-btn" onclick="playAuraGacha()">霊気ガチャ<span>(30枚)</span></button>
             <button class="boss-btn" onclick="openBossSelection()">強者の間</button>
-            <button class="dig-btn" onclick="startDigMode()">発掘開始</button>
+            <button class="dig-btn" onclick="openDigSelection()">発掘開始</button>
             <button id="btn-start" onclick="openStageSelection()">戦場出撃</button>
         </div>
     </div>
@@ -192,6 +192,12 @@
         <h2 style="color:#f00;">強者の間</h2>
         <div id="boss-list" class="box-list" style="grid-template-columns: 1fr; max-height: 480px; overflow-y: auto;"></div>
         <button onclick="closeBossSelection()" style="height:50px; margin-top:10px;">拠点に戻る</button>
+    </div>
+
+    <div id="view-dig-select" class="view">
+        <h2 style="color:#ff0;">発掘領域選択</h2>
+        <div id="dig-select-list" style="display: flex; flex-direction: column; max-height: 480px; overflow-y: auto; padding: 5px;"></div>
+        <button onclick="closeDigSelection()" style="height:45px; margin-top:15px;">拠点に戻る</button>
     </div>
 
     <div id="view-shop" class="view">
@@ -278,6 +284,16 @@ const stageBaseData = [
 // 【強者の間のボスリスト】
 const bossListData = ['雷鰻', '王蛇', '大雀蜂', '大王烏賊', '達磨', '火竜', '不死鳥', '天照'];
 
+// 【発掘モードのデータ】
+const digDataList = [
+    { tier: 0, name: '宝', h: 100, wp: '鉄の剣', stoneChance: 0.2, stoneCount: 1 },
+    { tier: 1, name: '宝Ⅱ', h: 1000, wp: '鋼の剣', stoneChance: 0.2, stoneCount: 1 },
+    { tier: 2, name: '宝Ⅲ', h: 12000, wp: '硝子の剣', stoneChance: 0.2, stoneCount: 2 },
+    { tier: 3, name: '宝Ⅳ', h: 150000, wp: '闇の剣', stoneChance: 0.2, stoneCount: 3 },
+    { tier: 4, name: '宝Ⅴ', h: 500000, wp: '閃光の剣', stoneChance: 0.2, stoneCount: 5 },
+    { tier: 5, name: '極宝', h: 1250000, wp: '錆びた剣', stoneChance: 0.2, stoneCount: 10 }
+];
+
 // 武器の強化段階データ
 const weaponUpgradeSpecs = [
     { name: "鉄の剣", nextName: "鉄の剣+1", rate: 80, pBonus: 2 },
@@ -291,7 +307,16 @@ const weaponUpgradeSpecs = [
 
 function getWeaponBonus(wName) {
     const spec = weaponUpgradeSpecs.find(s => s.name === wName);
-    return spec ? spec.pBonus : 2;
+    if (spec) return spec.pBonus;
+    
+    // 発掘武器の固有ステータス
+    if (wName === '鋼の剣') return 4;
+    if (wName === '硝子の剣') return 6;
+    if (wName === '闇の剣') return 10;
+    if (wName === '閃光の剣') return 15;
+    if (wName === '錆びた剣') return 30;
+
+    return 2; // デフォルト
 }
 
 function getNextUpgradeInfo(wName) {
@@ -310,7 +335,7 @@ function getBossHpMultiplier(name) {
 
 let coins = 0, stones = 0, box = [], selectedIds = [], seeds = [], auras = [], weapons = [], shopTargetId = null;
 let isBossMode = false, currentBossName = null;
-let isDigMode = false; 
+let isDigMode = false, currentDigTier = 0; 
 let maxClearedStage = 0; 
 let currentEndStage = 50; 
 
@@ -347,8 +372,13 @@ function updateHomeUI() {
             if (wp) {
                 let label = "剣";
                 if (wp.name.includes("+")) label = wp.name.split("の剣")[1] || "剣";
-                if (wp.name === "グレイデンの剣") label = "霊剣";
-                if (wp.name === "極・グレイデンの剣") label = "神剣";
+                else if (wp.name === "グレイデンの剣") label = "霊剣";
+                else if (wp.name === "極・グレイデンの剣") label = "神剣";
+                else if (wp.name === "鋼の剣") label = "鋼";
+                else if (wp.name === "硝子の剣") label = "硝子";
+                else if (wp.name === "闇の剣") label = "闇";
+                else if (wp.name === "閃光の剣") label = "閃光";
+                else if (wp.name === "錆びた剣") label = "錆";
                 weaponBadge = `<span class="weapon-badge">${label}</span>`;
             }
         }
@@ -572,7 +602,6 @@ function playGacha(times) {
     pullNext();
 }
 
-/* 上級ガチャシステム（単発 / 10連 両対応） */
 function playPremiumGacha(times) {
     const cost = times === 10 ? 1000 : 100;
     if (coins < cost) {
@@ -810,9 +839,33 @@ function startBossBattle(name) {
     cycle();
 }
 
-function startDigMode() {
+// 【新規追加】発掘モード選択画面を開く
+function openDigSelection() {
     if (selectedIds.length === 0) return alert("メンバーを選んでください");
-    isBossMode = false; isDigMode = true; remainingActions = 0; darumaTrigger = null;
+    document.getElementById('view-home').classList.remove('active');
+    document.getElementById('view-dig-select').classList.add('active');
+    
+    const container = document.getElementById('dig-select-list');
+    container.innerHTML = digDataList.map(d => {
+        return `<button class="stage-select-btn" onclick="startDigBattle(${d.tier})" style="height:65px; margin-bottom:10px; border-color:#aa0;">
+            <div style="font-size:18px; color:#ff0; margin-bottom:2px;">${d.name} <span style="font-size:12px; color:#ccc;">(HP:${d.h})</span></div>
+            <div style="font-size:11px; color:#0ff;">確定報酬: ${d.wp} / 石: ${d.stoneChance * 100}% で ${d.stoneCount} 個</div>
+        </button>`;
+    }).join('');
+}
+
+function closeDigSelection() {
+    document.getElementById('view-dig-select').classList.remove('active');
+    document.getElementById('view-home').classList.add('active');
+}
+
+// 【新規追加】発掘モードバトル開始
+function startDigBattle(tier) {
+    document.getElementById('view-dig-select').classList.remove('active');
+    document.getElementById('view-battle').classList.add('active');
+    document.getElementById('btn-retreat').style.display = "block";
+    
+    isBossMode = false; isDigMode = true; currentDigTier = tier; remainingActions = 0; darumaTrigger = null;
     
     party = selectedIds.map(sid => { 
         const c = box.find(b => b.id === sid); 
@@ -825,14 +878,12 @@ function startDigMode() {
         return {...c, curH: c.h, maxH: c.h, curM: c.m, maxM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, isP: true, poison: false, guard: false, charm: 0, lastDmg: 0, aura: aura, usedPhoenix: false}; 
     });
 
-    document.getElementById('view-home').classList.remove('active');
-    document.getElementById('view-battle').classList.add('active');
-    document.getElementById('btn-retreat').style.display = "block";
-    document.getElementById('header-stage-label').innerText = `発掘場`;
+    const d = digDataList[tier];
+    document.getElementById('header-stage-label').innerText = `発掘場 - ${d.name}`;
     
-    enemies = [{ name: '宝', id: 888, curH: 100, maxH: 100, p: 0, baseP: 0, baseS: 0, s: 0, curM: 0, m: 0, maxM: 0, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null }];
+    enemies = [{ name: d.name, id: 888, curH: d.h, maxH: d.h, p: 0, baseP: 0, baseS: 0, s: 0, curM: 0, m: 0, maxM: 0, isP: false, poison: false, guard: false, charm: 0, lastDmg: 0, aura: null }];
     document.getElementById('log').innerText = ""; 
-    addLog(`--- 秘宝発掘：宝を引き当てた！ ---`); 
+    addLog(`--- 秘宝発掘：【${d.name}】に挑む！ ---`); 
     cycle();
 }
 
@@ -887,7 +938,7 @@ function updateShopUI() {
                 upgradeZone.innerHTML = `
                     <div style="color:#fff; font-weight:bold;">【武器強化の試練】</div>
                     <div style="margin-top:2px; color:#ff0;">現在の装備: <span style="color:#f0f; font-weight:bold;">${wp.name}</span> (攻撃力+${wpBonus})</div>
-                    <div style="color:#0ff; font-size:10px; margin-top:2px; text-align:center;">限界突破済。これ以上強化できない最高の逸品です！</div>
+                    <div style="color:#0ff; font-size:10px; margin-top:2px; text-align:center;">限界突破済または特殊武器です。これ以上の強化はできません。</div>
                 `;
             }
         } else {
@@ -1162,10 +1213,15 @@ function next() {
             }
             saveData(); setTimeout(()=>location.reload(), 1500);
         } else if (isDigMode) {
-            const newWeapon = { id: Math.random(), name: "鉄の剣" };
+            // 【新規追加】発掘モードの報酬ロジック
+            const d = digDataList[currentDigTier];
+            const newWeapon = { id: Math.random(), name: d.wp };
             weapons.push(newWeapon);
-            addLog(`秘宝発掘成功！⚔️宝箱から装具【鉄の剣】を獲得した！`);
-            if (Math.random() < 0.20) { stones += 1; addLog(`💎さらに【強化石】を1個手に入れた！`); }
+            addLog(`秘宝発掘成功！⚔️宝箱から装具【${d.wp}】を獲得した！`);
+            if (Math.random() < d.stoneChance) { 
+                stones += d.stoneCount; 
+                addLog(`💎さらに【強化石】を${d.stoneCount}個手に入れた！`); 
+            }
             saveData(); setTimeout(() => location.reload(), 3000);
         } else {
             let reward = 1;
