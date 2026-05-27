@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>漢字RPG - 零 - 完全版（スキルガチャ搭載）</title>
+    <title>漢字RPG - 零 - 完全版（オンライン影闘搭載）</title>
     <style>
         body { background: #000; color: #fff; font-family: "MS Mincho", "Hiragino Mincho ProN", serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 10px 0; box-sizing: border-box; }
         #game-screen { border: 2px solid #fff; width: 380px; max-width: 95vw; min-height: 660px; padding: 10px; display: flex; flex-direction: column; background: #000; position: relative; box-sizing: border-box; }
@@ -93,16 +93,8 @@
         .glow-回復 { animation: pulse-green 2s infinite ease-in-out; }
         @keyframes pulse-green { 0% { color: #d0ffd0; text-shadow: 0 0 6px rgba(0, 255, 128, 0.7), 0 0 12px rgba(0, 255, 128, 0.4); } 50% { color: #ffffff; text-shadow: 0 0 20px rgba(60, 255, 160, 1), 0 0 32px rgba(0, 200, 100, 0.8); } 100% { color: #d0ffd0; text-shadow: 0 0 6px rgba(0, 255, 128, 0.7), 0 0 12px rgba(0, 255, 128, 0.4); } }
 
-        /* 複数オーラ用のエフェクトクラス */
-        .multi-aura {
-            display: inline-block;
-            background-size: 200% auto;
-            animation: aura-shine 2s linear infinite;
-        }
-        @keyframes aura-shine {
-            0% { background-position: 0% center; }
-            100% { background-position: 200% center; }
-        }
+        .multi-aura { display: inline-block; background-size: 200% auto; animation: aura-shine 2s linear infinite; }
+        @keyframes aura-shine { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
 
         .sell-btn-area { display: flex; justify-content: flex-end; margin-top: 3px; margin-bottom: 5px; }
         .sell-action-btn { background: #200; border: 1px solid #f33; color: #f99; font-size: 10px; padding: 2px 8px; cursor: pointer; border-radius: 3px; }
@@ -116,6 +108,9 @@
         .stage-select-btn.locked { border-color: #333; color: #555; cursor: not-allowed; background: #050505; }
         .stage-select-btn .lock-text { position: absolute; right: 15px; font-size: 10px; color: #f33; }
         .stage-select-btn .clear-text { position: absolute; right: 15px; font-size: 10px; color: #0f0; }
+        
+        #shadow-search-input { width: 100%; padding: 10px; margin-right: 5px; background: #111; color: #fff; border: 1px solid #a0a; box-sizing: border-box; font-size: 16px; text-align: center; }
+        #shadow-search-input::placeholder { color: #555; }
     </style>
 </head>
 <body>
@@ -156,7 +151,7 @@
         <div class="section-title">【所持している装具（武器）】</div>
         <div id="weapon-box" class="box-list" style="max-height: 130px; overflow-y: auto;"></div>
 
-        <div class="controls" style="grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); height: 145px; margin-top: 10px; gap: 4px;">
+        <div class="controls" style="grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(5, 1fr); height: 180px; margin-top: 10px; gap: 4px;">
             <button id="btn-gacha-normal-single" class="gacha-btn" onclick="playGacha(1)">通常単発<span>(10枚)</span></button>
             <button class="gacha-btn" onclick="playGacha(10)">通常10連<span>(100枚)</span></button>
             <button class="gacha-btn" style="background:#402; border-color:#d0d;" onclick="playPremiumGacha(1)">上級単発<span>(100枚)</span></button>
@@ -168,12 +163,14 @@
             
             <button class="dig-btn" style="grid-column: span 2;" onclick="openDigSelection()">発掘開始</button>
             <button style="grid-column: span 2; background: #135; border-color: #26a; font-size: 14px;" onclick="openManual()">説明書</button>
+
+            <button style="grid-column: span 2; background: #303; border-color: #a0a; color: #f0f;" onclick="uploadMyShadow()">影を刻む(共有)</button>
+            <button style="grid-column: span 2; background: #033; border-color: #0aa; color: #0ff;" onclick="openShadowList()">他者の影に挑む</button>
             
             <button id="btn-start" style="grid-column: span 4;" onclick="openStageSelection()">戦場出撃</button>
         </div>
     </div>
 
-    <!-- 追加：説明書ビュー -->
     <div id="view-manual" class="view">
         <h2 style="color:#0f0;">説明書</h2>
         <div style="padding: 15px; font-size: 13px; line-height: 1.8; background: #111; border: 1px solid #333; flex-grow: 1;">
@@ -203,11 +200,25 @@
         <button onclick="closeDigSelection()" style="height:45px; margin-top:15px;">拠点に戻る</button>
     </div>
 
+    <div id="view-shadow-list" class="view">
+        <h2 style="color:#f0f;">影の領域</h2>
+        <div class="guide-text">※検索コードを入力するか、一覧から選択して挑みます</div>
+        
+        <div style="display:flex; margin-bottom:10px;">
+            <input type="text" id="shadow-search-input" placeholder="4桁の検索コード (例: 1234)" maxlength="4" pattern="\d{4}">
+            <button onclick="searchShadow()" style="background:#a0a; border-color:#f0f; width:80px; flex-shrink:0;">検索</button>
+        </div>
+
+        <div id="shadow-list-container" style="display:flex; flex-direction:column; gap:8px; max-height: 420px; overflow-y: auto; padding: 5px; border: 1px solid #333; background: #050505; flex-grow: 1;">
+            </div>
+        
+        <button onclick="closeShadowList()" style="height:45px; margin-top:15px;">拠点に戻る</button>
+    </div>
+
     <div id="view-shop" class="view">
         <h2 style="color:#0aa; font-size:16px;">修練・継承・装具の儀</h2>
         <div id="shop-unit-detail" style="text-align:center; padding:8px; border:1px solid #0aa; margin-bottom:5px; background:#011;"></div>
         
-        <!-- スロット枠拡張エリア -->
         <div class="slot-upgrade-zone" style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
             <button class="buy-btn" id="btn-upgrade-skill-slot" onclick="buySlot('skill')" style="background:#020; border-color:#0a0; font-size:12px;">技枠拡張</button>
             <button class="buy-btn" id="btn-upgrade-aura-slot" onclick="buySlot('aura')" style="background:#002; border-color:#00a; font-size:12px;">霊気枠拡張</button>
@@ -234,12 +245,10 @@
         <div id="log"></div>
         <div id="player-area" class="unit-area"></div>
         
-        <!-- 戦闘基本操作パネル -->
         <div id="battle-controls" class="controls" style="margin-top:5px; grid-template-columns: 1fr 1fr;">
             <button id="btn-atk" onclick="startTargetSelection('attack')">たたかう</button>
             <button id="btn-skl" onclick="showSkillMenu()">スキル</button>
         </div>
-        <!-- 複数スキル選択パネル -->
         <div id="skill-select-controls" class="controls" style="margin-top:5px; grid-template-columns: repeat(2, 1fr); display:none; height:auto; min-height:55px; gap:4px;"></div>
     </div>
 </div>
@@ -284,7 +293,7 @@ const SKILL_DATA = {
     "妖精の粉": { cost: 15 }, "メテオ": { cost: 20 }, "デストラップ": { cost: 3 },
     "フェニックス": { cost: 20 }, "蘇りの歌": { cost: 50 }, "強固な甲羅": { cost: 5 },
     "天変地異": { cost: 50 }, "デスペラードヒューリー": { cost: 100 }, "精霊の歌": { cost: 0 },
-    "グレイデンスレイヴ": { cost: 0 } // 専用スキル
+    "グレイデンスレイヴ": { cost: 0 }
 };
 
 const auraTypes = ['回避', '行動力', '会心', '回復'];
@@ -352,6 +361,7 @@ let coins = 0, stones = 0, box = [], selectedIds = [], seeds = [], auras = [], w
 let isFirstGachaFree = true; 
 let isBossMode = false, currentBossName = null;
 let isDigMode = false, currentDigTier = 0; 
+let isShadowMode = false; // ★影モード追加
 let maxClearedStage = 0, currentEndStage = 50; 
 let party = [], enemies = [], stage = 1, queue = [], qIdx = 0, isSelecting = false, currentAction = null, remainingActions = 0; 
 let darumaTrigger = null; 
@@ -922,12 +932,12 @@ function setupBattleData(arr, isP) {
 
 function selectStageRange(start, end) {
     document.getElementById('view-stage-select').classList.remove('active'); document.getElementById('view-battle').classList.add('active'); document.getElementById('btn-retreat').style.display = "block";
-    isBossMode = false; isDigMode = false; remainingActions = 0; darumaTrigger = null; isGlobalDomination = false;
+    isBossMode = false; isDigMode = false; isShadowMode = false; remainingActions = 0; darumaTrigger = null; isGlobalDomination = false;
     party = setupBattleData(selectedIds.map(sid => box.find(b => b.id === sid)), true); stage = start; currentEndStage = end; initBattle();
 }
 function startBossBattle(name) {
     document.getElementById('view-boss-select').classList.remove('active'); document.getElementById('view-battle').classList.add('active'); document.getElementById('btn-retreat').style.display = "block";
-    isBossMode = true; currentBossName = name; isDigMode = false; remainingActions = 0; darumaTrigger = null; isGlobalDomination = false;
+    isBossMode = true; currentBossName = name; isDigMode = false; isShadowMode = false; remainingActions = 0; darumaTrigger = null; isGlobalDomination = false;
     document.getElementById('header-stage-label').innerText = `強者決戦`;
     party = setupBattleData(selectedIds.map(sid => box.find(b => b.id === sid)), true);
     const base = charData.find(c => c.name === name); const mult = getBossHpMultiplier(name);
@@ -936,7 +946,7 @@ function startBossBattle(name) {
 }
 function startDigBattle(tier) {
     document.getElementById('view-dig-select').classList.remove('active'); document.getElementById('view-battle').classList.add('active'); document.getElementById('btn-retreat').style.display = "block";
-    isBossMode = false; isDigMode = true; currentDigTier = tier; remainingActions = 0; darumaTrigger = null; isGlobalDomination = false;
+    isBossMode = false; isDigMode = true; isShadowMode = false; currentDigTier = tier; remainingActions = 0; darumaTrigger = null; isGlobalDomination = false;
     party = setupBattleData(selectedIds.map(sid => box.find(b => b.id === sid)), true);
     const d = digDataList[tier]; document.getElementById('header-stage-label').innerText = `発掘場 - ${d.name}`;
     enemies = setupBattleData([{ name: d.name, id: 888, h: d.h, p: 0, s: 0, m: 0 }], false);
@@ -1197,9 +1207,15 @@ function next() {
     if (enemies.every(e => e.curH <= 0)) { 
         party.forEach(p => { p.curH = p.maxH; p.curM = p.m; p.poison = false; p.charm = 0; p.guard = false; p.usedPhoenix = false; });
         addLog("勝利！全員全回復した");
-        if (isBossMode) {
+        
+        // ★ 影モードのクリア処理（報酬なし）
+        if (isShadowMode) {
+            addLog(`他者の影との手合わせが終了した！`);
+            saveData();
+            setTimeout(() => location.reload(), 2000);
+        }
+        else if (isBossMode) {
             addLog("強者を退けた！"); 
-            // 確率を10%に変更
             if (Math.random() < 0.10) { 
                 const base = charData.find(c => c.name === currentBossName); 
                 box.push({...base, id: Math.random(), auraId: null, auraIds: [], weaponId: null}); 
@@ -1276,6 +1292,159 @@ window.onload = () => {
     }
     updateHomeUI();
 };
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, orderBy, limit, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD2v_krmy0L-lzvLF6_AdoeI5dbXyJr4JM",
+    authDomain: "mojirpg-7ae6b.firebaseapp.com",
+    projectId: "mojirpg-7ae6b",
+    storageBucket: "mojirpg-7ae6b.firebasestorage.app",
+    messagingSenderId: "899351655158",
+    appId: "1:899351655158:web:8f30375e4188c2184232d7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  let currentShadowList = []; // 取得した影リストを保持する変数
+
+  // 1. 自分の影をアップロードする機能
+  window.uploadMyShadow = async function() {
+    if (selectedIds.length === 0) {
+      return alert("アップロードする出撃メンバーを選んでください。");
+    }
+
+    // ★ 名前とコードの入力
+    const playerName = prompt("影の登録名を入力してください（未入力なら「名もなき者」になります）");
+    if (playerName === null) return; // キャンセル時
+
+    let shadowCode = prompt("検索・公開用の【4桁の数字】を入力してください（例: 1234）");
+    if (shadowCode === null) return;
+    if (!/^\d{4}$/.test(shadowCode)) return alert("エラー：半角数字4桁で正しく入力してください。");
+
+    const myShadowParty = selectedIds.map(id => {
+      const char = box.find(b => b.id === id);
+      return {
+        name: char.name,
+        r: char.r,
+        p: char.p,
+        h: char.h,
+        s: char.s,
+        m: char.m,
+        skills: char.skills || [],
+        auraIds: char.auraIds || [],
+        weaponId: char.weaponId || null
+      };
+    });
+
+    try {
+      alert("影をサーバーに刻んでいます...");
+      await addDoc(collection(db, "shadows"), {
+        party: myShadowParty,
+        createdAt: serverTimestamp(),
+        uploader: playerName || "名もなき者",
+        code: shadowCode
+      });
+      alert(`アップロード完了！\nあなたの検索コードは【 ${shadowCode} 】です。友達に教えて対戦してもらいましょう！`);
+    } catch (e) {
+      console.error("アップロードエラー: ", e);
+      alert("アップロードに失敗しました。");
+    }
+  };
+
+  // 2. 影リスト画面を開く
+  window.openShadowList = async function() {
+    if (selectedIds.length === 0) return alert("自分の出撃メンバーを選んでください");
+    
+    document.getElementById('view-home').classList.remove('active');
+    document.getElementById('view-shadow-list').classList.add('active');
+    document.getElementById('shadow-search-input').value = ""; // 検索窓リセット
+    const listContainer = document.getElementById('shadow-list-container');
+    listContainer.innerHTML = "<div style='text-align:center; padding-top:20px; color:#ff0;'>影の気配を探っています...</div>";
+
+    try {
+      // 最新の影を30件取得してリスト表示
+      const q = query(collection(db, "shadows"), orderBy("createdAt", "desc"), limit(30));
+      const querySnapshot = await getDocs(q);
+      currentShadowList = [];
+      querySnapshot.forEach(doc => { currentShadowList.push(doc.data()); });
+      renderShadowList(currentShadowList);
+    } catch(e) {
+      console.error(e);
+      listContainer.innerHTML = "<div style='color:red; text-align:center;'>通信エラーが発生しました</div>";
+    }
+  };
+
+  // 3. リストの描画処理
+  window.renderShadowList = function(list) {
+    const container = document.getElementById('shadow-list-container');
+    if(list.length === 0) {
+        container.innerHTML = "<div style='text-align:center; color:#888; padding-top:20px;'>見つかりませんでした</div>";
+        return;
+    }
+    container.innerHTML = list.map((shadow, index) => {
+        const pNames = shadow.party.map(p => p.name).join(' / ');
+        const shadowName = shadow.uploader || "名もなき者";
+        return `<button class="stage-select-btn" onclick="startShadowBattleFromList(${index})" style="height:auto; min-height:60px; padding:8px 15px; border-color:#a0a;">
+            <div style="font-size:16px; color:#f0f; margin-bottom:4px;">${shadowName} <span style="font-size:10px; color:#ccc;">(検索コード: ${shadow.code || 'なし'})</span></div>
+            <div style="font-size:11px; color:#0ff;">編成: ${pNames}</div>
+            <span class="clear-text" style="color:#ff0; top: 50%; transform: translateY(-50%);">▶ 挑む</span>
+        </button>`;
+    }).join('');
+  };
+
+  // 4. コードで検索
+  window.searchShadow = async function() {
+    const code = document.getElementById('shadow-search-input').value;
+    if(!/^\d{4}$/.test(code)) return alert("4桁の数字を入力してください");
+    
+    const listContainer = document.getElementById('shadow-list-container');
+    listContainer.innerHTML = "<div style='text-align:center; padding-top:20px; color:#ff0;'>検索中...</div>";
+
+    try {
+      const q = query(collection(db, "shadows"), where("code", "==", code));
+      const querySnapshot = await getDocs(q);
+      currentShadowList = [];
+      querySnapshot.forEach(doc => { currentShadowList.push(doc.data()); });
+      renderShadowList(currentShadowList);
+    } catch(e) {
+      console.error(e);
+      listContainer.innerHTML = "<div style='color:red; text-align:center;'>検索エラーが発生しました</div>";
+    }
+  };
+
+  // 5. リストから選んでバトル開始
+  window.startShadowBattleFromList = function(index) {
+    const shadow = currentShadowList[index];
+    const shadowName = shadow.uploader || "名もなき者";
+
+    document.getElementById('view-shadow-list').classList.remove('active');
+    document.getElementById('view-battle').classList.add('active');
+    document.getElementById('btn-retreat').style.display = "block";
+
+    isShadowMode = true; isBossMode = false; isDigMode = false;
+    remainingActions = 0; darumaTrigger = null; isGlobalDomination = false;
+
+    party = setupBattleData(selectedIds.map(sid => box.find(b => b.id === sid)), true);
+    document.getElementById('header-stage-label').innerText = `影の領域 - ${shadowName}`;
+
+    // ダウンロードした影データを敵として変換 (idを適当に付与)
+    enemies = setupBattleData(shadow.party.map((c, i) => ({...c, id: 800+i})), false);
+    
+    document.getElementById('log').innerText = ""; 
+    addLog(`--- プレイヤー【 ${shadowName} 】の影と対峙した！ ---`); 
+    cycle();
+  };
+
+  // リスト画面を閉じる
+  window.closeShadowList = function() {
+    document.getElementById('view-shadow-list').classList.remove('active');
+    document.getElementById('view-home').classList.add('active');
+  };
 </script>
 </body>
 </html>
