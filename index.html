@@ -156,7 +156,7 @@
         <div class="section-title">【所持している装具（武器）】</div>
         <div id="weapon-box" class="box-list" style="max-height: 130px; overflow-y: auto;"></div>
 
-        <div class="controls" style="grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); height: 110px; margin-top: 10px; gap: 4px;">
+        <div class="controls" style="grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); height: 145px; margin-top: 10px; gap: 4px;">
             <button id="btn-gacha-normal-single" class="gacha-btn" onclick="playGacha(1)">通常単発<span>(10枚)</span></button>
             <button class="gacha-btn" onclick="playGacha(10)">通常10連<span>(100枚)</span></button>
             <button class="gacha-btn" style="background:#402; border-color:#d0d;" onclick="playPremiumGacha(1)">上級単発<span>(100枚)</span></button>
@@ -167,8 +167,21 @@
             <button class="boss-btn" style="grid-column: span 2;" onclick="openBossSelection()">強者の間</button>
             
             <button class="dig-btn" style="grid-column: span 2;" onclick="openDigSelection()">発掘開始</button>
-            <button id="btn-start" style="grid-column: span 2;" onclick="openStageSelection()">戦場出撃</button>
+            <button style="grid-column: span 2; background: #135; border-color: #26a; font-size: 14px;" onclick="openManual()">説明書</button>
+            
+            <button id="btn-start" style="grid-column: span 4;" onclick="openStageSelection()">戦場出撃</button>
         </div>
+    </div>
+
+    <!-- 追加：説明書ビュー -->
+    <div id="view-manual" class="view">
+        <h2 style="color:#0f0;">説明書</h2>
+        <div style="padding: 15px; font-size: 13px; line-height: 1.8; background: #111; border: 1px solid #333; flex-grow: 1;">
+            <p style="margin-top:0;"><strong>1. キャラ強化のやり方：</strong><br><span style="color:#ccc;">キャラをダブルタップで強化画面に移行します。</span></p>
+            <p><strong>2. 強者の間について：</strong><br><span style="color:#ccc;">強者の間に勝利するとボスキャラを10％の確率で手に入れることができます。</span></p>
+            <p><strong>3. ガチャについて：</strong><br><span style="color:#ccc;">通常ガチャは★6まで、上級ガチャは★7まで入ってます。</span></p>
+        </div>
+        <button onclick="closeManual()" style="height:45px; margin-top:15px;">拠点に戻る</button>
     </div>
 
     <div id="view-stage-select" class="view">
@@ -270,12 +283,12 @@ const SKILL_DATA = {
     "攻撃増幅薬": { cost: 8 }, "ブリザード": { cost: 10 }, "支配": { cost: 3 },
     "妖精の粉": { cost: 15 }, "メテオ": { cost: 20 }, "デストラップ": { cost: 3 },
     "フェニックス": { cost: 20 }, "蘇りの歌": { cost: 50 }, "強固な甲羅": { cost: 5 },
-    "天変地異": { cost: 50 }, "デスペラードヒューリー": { cost: 100 }, "精霊の歌": { cost: 0 }
+    "天変地異": { cost: 50 }, "デスペラードヒューリー": { cost: 100 }, "精霊の歌": { cost: 0 },
+    "グレイデンスレイヴ": { cost: 0 } // 専用スキル
 };
 
 const auraTypes = ['回避', '行動力', '会心', '回復'];
 
-// 霊気仕様変更：行動力は確率による2回行動に変更（★6を追加）
 const auraSpecs = {
     '回避': { 1: {val: 5, txt: "回避5%"}, 2: {val: 12, txt: "回避12%"}, 3: {val: 20, txt: "回避20%"}, 4: {val: 30, txt: "回避30%"}, 5: {val: 40, txt: "回避40%"}, 6: {val: 50, txt: "回避50%"} },
     '行動力': { 1: {val: 20, txt: "20%で2回行動"}, 2: {val: 30, txt: "30%で2回行動"}, 3: {val: 40, txt: "40%で2回行動"}, 4: {val: 50, txt: "50%で2回行動"}, 5: {val: 65, txt: "65%で2回行動"}, 6: {val: 80, txt: "80%で2回行動"} },
@@ -301,6 +314,13 @@ const digDataList = [
 ];
 
 const weaponUpgradeSpecs = [
+    { name: "鉄の剣", nextName: "鉄の剣+1", rate: 80, pBonus: 3 },
+    { name: "鉄の剣+1", nextName: "鉄の剣+2", rate: 50, pBonus: 4 },
+    { name: "鉄の剣+2", nextName: "鉄の剣+3", rate: 25, pBonus: 5 },
+    { name: "鉄の剣+3", nextName: "鉄の剣+4", rate: 10, pBonus: 8 },
+    { name: "鉄の剣+4", nextName: "グレイデンの剣", rate: 4, pBonus: 12 },
+    { name: "グレイデンの剣", nextName: "真・グレイデンの剣", rate: 1.5, pBonus: 15 },
+    { name: "真・グレイデンの剣", nextName: null, rate: 0, pBonus: 15 },
     { name: "鋼の剣", nextName: "鋼の剣+1", rate: 60, pBonus: 4 },
     { name: "鋼の剣+1", nextName: "鋼の剣+2", rate: 35, pBonus: 6 },
     { name: "鋼の剣+2", nextName: "鋼の剣+3", rate: 12, pBonus: 8 },
@@ -329,7 +349,7 @@ function getBossHpMultiplier(name) {
 }
 
 let coins = 0, stones = 0, box = [], selectedIds = [], seeds = [], auras = [], weapons = [], shopTargetId = null;
-let isFirstGachaFree = true; // 初回無料単発フラグ
+let isFirstGachaFree = true; 
 let isBossMode = false, currentBossName = null;
 let isDigMode = false, currentDigTier = 0; 
 let maxClearedStage = 0, currentEndStage = 50; 
@@ -391,7 +411,6 @@ function updateHomeUI() {
     document.getElementById('global-coin-count').innerText = coins;
     document.getElementById('global-stone-count').innerText = stones;
     
-    // 通常単発ボタンの初回無料表示切り替え
     const singleGachaBtn = document.getElementById('btn-gacha-normal-single');
     if (singleGachaBtn) {
         singleGachaBtn.innerHTML = isFirstGachaFree ? '通常単発<span style="color:#0f0;">(初回無料)</span>' : '通常単発<span>(10枚)</span>';
@@ -413,6 +432,9 @@ function updateHomeUI() {
                 else if (wp.name === "デスペラードソード") label = "絶望";
                 else if (wp.name === "真・デスペラードソード") label = "真絶";
                 else if (wp.name === "鋼の剣") label = "鋼"; else if (wp.name === "硝子の剣") label = "硝子";
+                else if (wp.name === "鉄の剣") label = "鉄";
+                else if (wp.name === "グレイデンの剣") label = "グレ";
+                else if (wp.name === "真・グレイデンの剣") label = "真グ";
                 else if (wp.name === "闇の剣") label = "闇"; else if (wp.name === "閃光の剣") label = "閃光"; else if (wp.name === "錆びた剣") label = "錆";
                 weaponBadge = `<span class="weapon-badge">${label}</span>`;
             }
@@ -460,7 +482,6 @@ function updateHomeUI() {
     document.getElementById('btn-sell-unit').disabled = selectedIds.length === 0;
 }
 
-// 仕様変更：キャラをまとめて売れるように拡張（最後の1体は保護）
 function sellSelectedUnit() {
     if (selectedIds.length === 0) return;
     
@@ -519,7 +540,7 @@ function equipWeaponFromHome(weaponIndex) {
     const weapon = weapons[weaponIndex]; if (!char || !weapon) return;
     const currentOwner = box.find(b => b.weaponId === weapon.id); if (currentOwner) currentOwner.weaponId = null;
     if (char.weaponId === weapon.id) { char.weaponId = null; alert(`${char.name} の装具を外しました。`); } 
-    else { char.weaponId = weapon.id; const bonus = getWeaponBonus(weapon.name); alert(`${char.name} に 【weapon.name】 を装備しました！（攻撃力+${bonus}）`); }
+    else { char.weaponId = weapon.id; const bonus = getWeaponBonus(weapon.name); alert(`${char.name} に 【${weapon.name}】 を装備しました！（攻撃力+${bonus}）`); }
     saveData(); updateHomeUI();
 }
 
@@ -577,7 +598,6 @@ function playSkillGacha() {
     }, 40);
 }
 
-// 仕様変更：初回のみ単発無料化対応
 function playGacha(times) {
     let cost = times === 10 ? 100 : 10;
     let isFree = false;
@@ -588,7 +608,7 @@ function playGacha(times) {
     
     if (coins < cost) return alert(`コインが不足しています！`); 
     coins -= cost; 
-    if (isFree) isFirstGachaFree = false; // 無料権を消費
+    if (isFree) isFirstGachaFree = false; 
     
     document.getElementById('global-coin-count').innerText = coins;
     openGachaOverlay(""); const display = document.getElementById('gacha-kanji-display');
@@ -655,7 +675,6 @@ function playPremiumGacha(times) {
     }; pullNextPremium();
 }
 
-// 霊気ガチャ確率調整（★6追加に伴う調整）
 function playAuraGacha() {
     const cost = 30; if (coins < cost) return alert(`コインが不足しています！`); coins -= cost; document.getElementById('global-coin-count').innerText = coins;
     openGachaOverlay("霊気収束中..."); const display = document.getElementById('gacha-kanji-display');
@@ -663,7 +682,7 @@ function playAuraGacha() {
         display.innerText = auraTypes[Math.floor(Math.random() * auraTypes.length)]; count++;
         if (count > 15) {
             clearInterval(interval); let r = 1; const rand = Math.random() * 100;
-            if (rand < 0.2) r = 6; // ★6（超低確率）
+            if (rand < 0.2) r = 6; 
             else if (rand < 1.0) r = 5; 
             else if (rand < 4.0) r = 4; 
             else if (rand < 10.0) r = 3; 
@@ -679,6 +698,9 @@ function playAuraGacha() {
         }
     }, 40);
 }
+
+function openManual() { document.getElementById('view-home').classList.remove('active'); document.getElementById('view-manual').classList.add('active'); }
+function closeManual() { document.getElementById('view-manual').classList.remove('active'); document.getElementById('view-home').classList.add('active'); }
 
 function openStageSelection() {
     if (selectedIds.length === 0) return alert("メンバーを選んでください");
@@ -866,7 +888,13 @@ function buyStat(s, cost) { if (coins < cost) return alert(`コインが不足�
 
 function setupBattleData(arr, isP) {
     return arr.map(c => {
-        let wpBonus = 0; if (isP && c.weaponId && weapons.find(w => w.id === c.weaponId)) wpBonus = getWeaponBonus(weapons.find(w => w.id === c.weaponId).name);
+        let wpBonus = 0; 
+        let hasTrueGreyden = false;
+        if (isP && c.weaponId && weapons.find(w => w.id === c.weaponId)) {
+            const wp = weapons.find(w => w.id === c.weaponId);
+            wpBonus = getWeaponBonus(wp.name);
+            if (wp.name === "真・グレイデンの剣") hasTrueGreyden = true;
+        }
         
         let activeAuras = [];
         if (isP && c.auraIds) {
@@ -877,6 +905,10 @@ function setupBattleData(arr, isP) {
             activeSkills = c.skills.map(s => ({ name: s.name, cost: s.cost }));
         } else if (c.skill) {
             activeSkills = [{ name: c.skill, cost: c.cost || 1 }];
+        }
+        
+        if (hasTrueGreyden) {
+            activeSkills.push({ name: 'グレイデンスレイヴ', cost: 0, oncePerMatch: true, used: false });
         }
 
         return {
@@ -962,7 +994,6 @@ async function turn() {
 
     if (u.blind > 0) u.blind--; if (u.atkBuff > 0) u.atkBuff--; if (u.invincible > 0) u.invincible--;
 
-    // 仕様変更：霊気「行動力」の新しい発動判定（指定された確率で2回行動化）
     if (remainingActions <= 0) {
         remainingActions = 1; 
         if (u.auras) {
@@ -993,7 +1024,7 @@ async function turn() {
             const enemySkillObj = u.skillsList ? u.skillsList[0] : null;
             const enemySkill = enemySkillObj ? enemySkillObj.name : u.skill;
             let costM = SKILL_DATA[enemySkill] ? SKILL_DATA[enemySkill].cost : (u.cost || 1);
-            let hasAoE = ['感電','咆哮','鱗粉','御廚子','巨大触手','炎のブレス','伏魔御廚子','ムチ','ブリザード','妖精の粉','攻撃増幅薬','蘇りの歌','強固な甲羅','天変地異','デスペラードヒューリー'].includes(enemySkill);
+            let hasAoE = ['感電','咆哮','鱗粉','御廚子','巨大触手','炎のブレス','伏魔御廚子','ムチ','ブリザード','妖精の粉','攻撃増幅薬','蘇りの歌','強固な甲羅','天変地異','デスペラードヒューリー','グレイデンスレイヴ'].includes(enemySkill);
             let canCast = (u.curM >= costM); if(enemySkill==='捨て身') canCast = (u.curH > 5); if(enemySkill==='精霊の歌') canCast = (u.curH > 1);
             if ((hasAoE || ['毒牙','丸呑み','連撃','イーター','猛毒','達磨さんが転んだ','神の審判','マジ殴り','回復','閃光','斬撃','大回復','麻痺','捨て身','応援','支配','メテオ','デストラップ','フェニックス','精霊の歌'].includes(enemySkill)) && canCast) {
                 if (enemySkill === 'フェニックス' || enemySkill === '精霊の歌') { const deads = enemies.filter(e => e.curH <= 0); if(deads.length > 0) executeAction(u, deads[Math.floor(Math.random()*deads.length)], 'skill', enemySkill); else executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'attack'); }
@@ -1018,6 +1049,7 @@ function showSkillMenu() {
         let cText = `MP:${costM}`;
         if(s.name === '捨て身') { canCast = (u.curH > 5); cText = "HP:5"; }
         else if(s.name === '精霊の歌') { canCast = (u.curH > 1); cText = "HP半減"; }
+        else if(s.oncePerMatch) { canCast = !s.used; cText = s.used ? "使用済" : "1回制限"; }
         else { canCast = (u.curM >= costM); }
         
         btnHtml += `<button onclick="confirmSkillSelection('${s.name}')" ${!canCast?'disabled':''} style="font-size:12px; line-height:1.2; padding:4px 2px;">${s.name}<br><span style="font-size:8px; color:#ff0;">(${cText})</span></button>`;
@@ -1042,7 +1074,7 @@ function startTargetSelection(type, skillName = null) {
     const sName = skillName || (u.skillsList && u.skillsList[0] ? u.skillsList[0].name : u.skill);
     
     if (type === 'skill') { 
-        let isAoE = ['感電','咆哮','鱗粉','御廚子','巨大触手','炎のブレス','伏魔御廚子','達磨さんが転んだ','ムチ','ブリザード','妖精の粉','攻撃増幅薬','蘇りの歌','強固な甲羅','天変地異','デスペラードヒューリー','支配'].includes(sName);
+        let isAoE = ['感電','咆哮','鱗粉','御廚子','巨大触手','炎のブレス','伏魔御廚子','達磨さんが転んだ','ムチ','ブリザード','妖精の粉','攻撃増幅薬','蘇りの歌','強固な甲羅','天変地異','デスペラードヒューリー','支配','グレイデンスレイヴ'].includes(sName);
         if (isAoE) return executeAction(u, null, 'skill', sName);
     }
     
@@ -1086,7 +1118,7 @@ function executeAction(u, t, type, skillName = null) {
         checkAndRevivePhoenix(t);
     } else {
         const sName = skillName || u.skill;
-        let costM = SKILL_DATA[sName] ? SKILL_DATA[sName].cost : 1;
+        let costM = SKILL_DATA[sName] ? SKILL_DATA[sName].cost : 0;
         if (sName === '捨て身') u.curH -= 5; else if (sName === '精霊の歌') u.curH -= Math.max(1, Math.floor(u.curH / 2)); else u.curM -= costM;
         
         addLog(u.name + "：【" + sName + "】"); const targets = u.isP ? enemies : party; const allies = u.isP ? party : enemies;
@@ -1128,8 +1160,6 @@ function executeAction(u, t, type, skillName = null) {
         else if (sName === '連撃') { if(t.invincible<=0) { let d1 = u.p; t.curH = Math.max(0, t.curH - d1); checkAndRevivePhoenix(t); let d2 = u.p; t.curH = Math.max(0, t.curH - d2); checkAndRevivePhoenix(t); u.lastDmg = d1 + d2; addLog(`連続斬撃！ ${t.name}に ${d1}、${d2} ダメージ！`); } }
         else if (sName === 'マジ殴り') { if(t.invincible<=0) { t.curH = Math.max(0, t.curH - 200); addLog(`必殺のマジ殴り！ ${t.name}に200ダメ！`); checkAndRevivePhoenix(t); } }
         else if (sName === 'イーター') { if(t.invincible<=0) { t.curH = Math.max(0, t.curH - 30); u.curH = Math.min(u.maxH, u.curH + 30); addLog(`魂を喰らう！ 30ダメ＆30回復！`); checkAndRevivePhoenix(t); } }
-        
-        // 仕様変更：魅了の成功確率を30％へ変更
         else if (sName === '魅了') { 
             if (Math.random() < 0.3) {
                 t.charm = 2; addLog(`💘 ${t.name}を魅了した！`); 
@@ -1137,7 +1167,17 @@ function executeAction(u, t, type, skillName = null) {
                 addLog(`💨 ${t.name}には魅了が効かなかった...`);
             }
         } 
-        
+        else if (sName === 'グレイデンスレイヴ') {
+            const skillObj = u.skillsList && u.skillsList.find(sk => sk.name === 'グレイデンスレイヴ');
+            if (skillObj) skillObj.used = true;
+            targets.forEach(e => {
+                if (e.curH > 0 && e.invincible <= 0) {
+                    e.curH = Math.max(0, e.curH - 30);
+                    checkAndRevivePhoenix(e);
+                }
+            });
+            addLog("真の力が解放された！全体に30ダメージ！");
+        }
         else if (sName === '吸血') { u.curH = Math.min(u.maxH, u.curH + 3); }
         else if (sName === '血欲') { if(t.invincible<=0) { t.curH = Math.max(0, t.curH - 2); u.curH = Math.min(u.maxH, u.curH + 2); checkAndRevivePhoenix(t); } }
         else if (sName === '物真似') { if(t.invincible<=0) { t.curH = Math.max(0, t.curH - u.lastDmg); checkAndRevivePhoenix(t); } }
@@ -1158,7 +1198,13 @@ function next() {
         party.forEach(p => { p.curH = p.maxH; p.curM = p.m; p.poison = false; p.charm = 0; p.guard = false; p.usedPhoenix = false; });
         addLog("勝利！全員全回復した");
         if (isBossMode) {
-            addLog("強者を退けた！"); if (Math.random() < 0.05) { const base = charData.find(c => c.name === currentBossName); box.push({...base, id: Math.random(), auraId: null, auraIds: [], weaponId: null}); addLog("★" + currentBossName + "が仲間に加わった！"); }
+            addLog("強者を退けた！"); 
+            // 確率を10%に変更
+            if (Math.random() < 0.10) { 
+                const base = charData.find(c => c.name === currentBossName); 
+                box.push({...base, id: Math.random(), auraId: null, auraIds: [], weaponId: null}); 
+                addLog("★" + currentBossName + "が仲間に加わった！"); 
+            }
             saveData(); setTimeout(()=>location.reload(), 1500);
         } else if (isDigMode) {
             const d = digDataList[currentDigTier]; weapons.push({ id: Math.random(), name: d.wp }); addLog(`秘宝発掘成功！⚔️【${d.wp}】を獲得！`);
@@ -1177,7 +1223,6 @@ function next() {
     else { remainingActions = 0; qIdx++; if (qIdx >= queue.length) cycle(); else turn(); }
 }
 
-// 仕様変更：複数スロット開放時の二色・三色・虹色マルチカラーグラデーション表示対応
 function updateUI() {
     const activeUnit = queue[qIdx];
     const draw = (u) => {
@@ -1188,47 +1233,49 @@ function updateUI() {
         
         if (u.curH > 0 && u.auras && u.auras.length > 0) {
             if (u.auras.length === 1) {
-                // 1つだけなら従来のシンプルな脈動アニメーション
                 auraClass = `glow-${u.auras[0].type}`;
             } else {
-                // 複数装着時はリッチなグラデーションスタイルに変更
                 auraClass = "multi-aura";
-                const typeColors = { '回避': '#00a0ff', '行動力': '#ff3c3c', '会心': '#e63cff', '回復': '#3cffa0' };
+                const typeColors = { '回避': '#0080ff', '行動力': '#ff0000', '会心': '#c800ff', '回復': '#00ff80' };
                 let colors = u.auras.map(a => typeColors[a.type] || '#fff');
-                
-                if (u.auras.length >= 4) {
-                    // 4つ以上は最終形態の虹色
-                    auraStyle = "background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff); -webkit-background-clip: text; color: transparent !important; text-shadow: none !important;";
-                } else {
-                    // 2つなら半々、3つなら3等分の二色・三色表示
-                    auraStyle = `background: linear-gradient(90deg, ${colors.join(', ')}); -webkit-background-clip: text; color: transparent !important; text-shadow: none !important;`;
-                }
+                if(colors.length === 2) auraStyle = `background-image: linear-gradient(45deg, ${colors[0]}, ${colors[1]}, ${colors[0]}); -webkit-background-clip: text; -webkit-text-fill-color: transparent;`;
+                else if(colors.length >= 3) auraStyle = `background-image: linear-gradient(45deg, ${colors[0]}, ${colors[1]}, ${colors[2]}, ${colors[0]}); -webkit-background-clip: text; -webkit-text-fill-color: transparent;`;
             }
         }
         
-        let overrideColor = ""; if (u.charm > 0) overrideColor = "color:#f0f;"; else if (u.poison) overrideColor = "color:#0f0;"; else if (u.guard || u.invincible > 0) overrideColor = "color:#0aa;";
-        
-        // 状態異常カラー指定がなく、マルチオーラスタイルが生成されている場合はグラデーションを優先適用
-        let finalStyle = overrideColor;
-        if (auraStyle && !overrideColor) {
-            finalStyle = auraStyle;
-        } else if (auraStyle && overrideColor) {
-            // 状態異常中かつマルチオーラ時は少しブレンドさせる
-            finalStyle += " opacity: 0.9;";
-        }
+        let statsStr = `HP:${u.curH}/${u.maxH}`; if(u.maxM>0) statsStr += ` M:${u.curM}`;
+        let hpPct = Math.max(0, (u.curH / u.maxH) * 100);
+        let badgeHtml = "";
+        if (u.atkBuff > 0) badgeHtml += '<span style="color:#f55; font-size:10px;">[攻↑]</span>';
+        if (u.invincible > 0) badgeHtml += '<span style="color:#ff0; font-size:10px;">[盾]</span>';
+        if (u.blind > 0) badgeHtml += '<span style="color:#888; font-size:10px;">[暗]</span>';
+        if (u.poison) badgeHtml += '<span style="color:#0f0; font-size:10px;">[毒]</span>';
+        if (u.paralyze > 0) badgeHtml += '<span style="color:#ff0; font-size:10px;">[痺]</span>';
+        if (u.deathTrap) badgeHtml += '<span style="color:#a0a; font-size:10px;">[死]</span>';
         
         return `<div class="${classes}" onclick="onUnitClick(${u.id})">
-            <span class="kanji ${auraClass}" style="${finalStyle} font-size:${u.name.length >= 4 ? '15px' : '38px'}; white-space:nowrap;">${u.name}</span>
-            <div class="hp-bar-bg"><div class="hp-bar-fill" style="width:${(u.curH/u.maxH)*100}%\"></div></div>
-            <div class="stats-text">H:${u.curH} P:${u.p}</div>
+            <div class="kanji ${auraClass}" style="font-size:35px; ${auraStyle}">${u.name}</div>
+            <div class="hp-bar-bg"><div class="hp-bar-fill" style="width:${hpPct}%;"></div></div>
+            <div class="stats-text">${statsStr}</div>
+            <div style="height:12px; margin-top:2px;">${badgeHtml}</div>
         </div>`;
     };
-    document.getElementById('player-area').innerHTML = party.map(draw).join(''); document.getElementById('enemy-area').innerHTML = enemies.map(draw).join('');
+    document.getElementById('player-area').innerHTML = party.map(draw).join('');
+    document.getElementById('enemy-area').innerHTML = enemies.map(draw).join('');
 }
-function addLog(m) { const l = document.getElementById('log'); l.innerText += m + "\n"; l.scrollTop = l.scrollHeight; }
 
-if (!loadData()) { ['蟻','蝿','蛆'].forEach(n => { const b = charData.find(c => c.name === n); if(b) box.push({...b, id: Math.random(), auraId: null, auraIds: [], weaponId: null}); }); maxClearedStage = 0; saveData(); }
-updateHomeUI();
+function addLog(msg) {
+    const l = document.getElementById('log'); l.innerHTML += `<div>${msg}</div>`; l.scrollTop = l.scrollHeight;
+}
+
+window.onload = () => {
+    if (!loadData()) {
+        box = [];
+        coins = 1500; stones = 15;
+        saveData();
+    }
+    updateHomeUI();
+};
 </script>
 </body>
 </html>
