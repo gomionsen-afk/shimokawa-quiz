@@ -117,21 +117,22 @@
 <body>
 
 <div id="game-screen">
-    <div id="intro-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; padding: 20px;">
+   <!-- display: none; にしておきます -->
+<div id="intro-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; padding: 20px;">
+        
+        <img src="unnamed.png" alt="案内人" style="max-width: 300px; max-height: 300px; object-fit: contain; margin-bottom: 20px;">
+        
+        <div style="background: #111; border: 2px solid #fff; border-radius: 8px; padding: 15px; position: relative; width: 90%; margin-bottom: 30px; box-sizing: border-box;">
+            <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); border-bottom: 12px solid #fff; border-left: 10px solid transparent; border-right: 10px solid transparent;"></div>
+            <div style="position: absolute; top: -9px; left: 50%; transform: translateX(-50%); border-bottom: 10px solid #111; border-left: 8px solid transparent; border-right: 8px solid transparent;"></div>
             
-            <img src="unnamed.png" alt="案内人" style="max-width: 300px; max-height: 300px; object-fit: contain; margin-bottom: 20px;">
-            
-            <div style="background: #111; border: 2px solid #fff; border-radius: 8px; padding: 15px; position: relative; width: 90%; margin-bottom: 30px; box-sizing: border-box;">
-                <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); border-bottom: 12px solid #fff; border-left: 10px solid transparent; border-right: 10px solid transparent;"></div>
-                <div style="position: absolute; top: -9px; left: 50%; transform: translateX(-50%); border-bottom: 10px solid #111; border-left: 8px solid transparent; border-right: 8px solid transparent;"></div>
-                
-                <p style="font-size: 13px; line-height: 1.6; margin: 0; color: #fff; text-align: left; word-break: break-all; font-family: 'MS Mincho', 'Hiragino Mincho ProN', serif;">
-                    『ようこそ、文字に支配された世界へ。俺たちの目標はラスボスを倒すこと・・・あと、最強になって支配することだ。・・・まあ、頑張れや。』
-                </p>
-            </div>
-            
-            <button onclick="closeIntro()" style="padding: 10px 40px; font-size: 15px; border: 1px solid #fff; background: #222; color: #fff; cursor: pointer; font-family: 'MS Mincho', 'Hiragino Mincho ProN', serif;">世界へ踏み出す</button>
+            <!-- id="intro-text" を追加（中身は空でもOKです。JSで上書きします） -->
+            <p id="intro-text" style="font-size: 13px; line-height: 1.6; margin: 0; color: #fff; text-align: left; word-break: break-all; font-family: 'MS Mincho', 'Hiragino Mincho ProN', serif;">
+            </p>
         </div>
+        
+        <button onclick="closeIntro()" style="padding: 10px 40px; font-size: 15px; border: 1px solid #fff; background: #222; color: #fff; cursor: pointer; font-family: 'MS Mincho', 'Hiragino Mincho ProN', serif;">世界へ踏み出す</button>
+</div>
     <div id="gacha-overlay">
         <div id="gacha-effect-text">召喚の儀</div>
         <div id="gacha-kanji-display"></div>
@@ -1570,6 +1571,31 @@ window.onload = () => {
   window.closeIntro = function() {
       document.getElementById('intro-overlay').style.display = 'none';
   };
+ // 画面が読み込まれた時に実行される処理
+window.addEventListener('load', function() {
+    const introOverlay = document.getElementById('intro-overlay');
+    const introText = document.getElementById('intro-text');
+
+    // localStorageに 'hasVisited' という記録があるかチェック
+    if (!localStorage.getItem('hasVisited')) {
+        // 記録がない ＝【初回起動】の場合
+        introText.innerText = '『ようこそ、文字に支配された世界へ。俺たちの目標はラスボスを倒すこと・・・あと、最強になって支配することだ。・・・まあ、頑張れや。』';
+        
+        // 初回訪問の記録をつける（次回から2回目以降の判定になる）
+        localStorage.setItem('hasVisited', 'true');
+    } else {
+        // 記録がある ＝【2回目以降】の場合
+        introText.innerText = '『おかえり相棒・・・。』';
+    }
+
+    // 案内人の画面を表示する
+    introOverlay.style.display = 'flex';
+});
+
+// ボタンを押して画面を閉じる処理（すでにあれば不要です）
+function closeIntro() {
+    document.getElementById('intro-overlay').style.display = 'none';
+}   
 </script>
 </body>
 </html>
