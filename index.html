@@ -1561,23 +1561,15 @@ window.onload = () => {
     cycle();
   };
 
-  window.closeShadowList = function() {
+ window.closeShadowList = function() {
     document.getElementById('view-shadow-list').classList.remove('active');
     document.getElementById('view-home').classList.add('active');
   };
- // 【追加】初回挨拶オーバーレイを閉じる関数
-function closeIntro() {
-    document.getElementById('intro-overlay').style.display = 'none';
-    // ブラウザに「すでに見た」という記録を保存し、次回以降は非表示にする
-    localStorage.setItem('kanji_rpg_intro_done', 'true');
-}
 
-// 【追加】ページ読み込み時に初回起動かどうかを判定して画面を表示
-window.addEventListener('DOMContentLoaded', () => {
-    if (!localStorage.getItem('kanji_rpg_intro_done')) {
-        document.getElementById('intro-overlay').style.display = 'flex';
-    }
-});   
+  // 【追加】初回挨拶オーバーレイを閉じる関数
+  window.closeIntro = function() {
+      document.getElementById('intro-overlay').style.display = 'none';
+  };
 </script>
 </body>
 </html>
