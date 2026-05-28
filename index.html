@@ -72,7 +72,8 @@
         
         .equipped-badge { font-size: 7px; position: absolute; bottom: 2px; left: 2px; color: #f0f; border: 1px solid #f0f; padding: 0 1px; background: #202; }
         .weapon-badge { font-size: 7px; position: absolute; bottom: 2px; right: 2px; color: #fff; border: 1px solid #aaa; padding: 0 1px; background: #333; }
-        .current-aura-display { border: 1px dashed #0aa; background: #011; padding: 6px; margin: 5px 0; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .current-aura-display { border: 1px dashed #0aa; background: #011; padding: 6px; margin: 5px 0; font-size: 12px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+        .current-aura-display.over { background: #033 !important; }
 
         .seed-box-item { font-size: 10px !important; border-color: #050 !important; color: #0f0; background: #010; flex-direction: column; transition: 0.2s; }
         .seed-box-item:hover { background: #020; border-color: #0a0 !important; }
@@ -164,7 +165,8 @@
             <button class="dig-btn" style="grid-column: span 2;" onclick="openDigSelection()">発掘開始</button>
             <button style="grid-column: span 2; background: #135; border-color: #26a; font-size: 14px;" onclick="openManual()">説明書</button>
 
-            <button style="grid-column: span 2; background: #303; border-color: #a0a; color: #f0f;" onclick="uploadMyShadow()">影を刻む(共有)</button>
+            <button style="grid-column: span 1; background: #303; border-color: #a0a; color: #f0f; font-size: 12px;" onclick="uploadMyShadow()">影を刻む</button>
+            <button style="grid-column: span 1; background: #300; border-color: #f00; color: #f88; font-size: 12px;" onclick="deleteMyShadow()">影を削除</button>
             <button style="grid-column: span 2; background: #033; border-color: #0aa; color: #0ff;" onclick="openShadowList()">他者の影に挑む</button>
             
             <button id="btn-start" style="grid-column: span 4;" onclick="openStageSelection()">戦場出撃</button>
@@ -175,8 +177,8 @@
         <h2 style="color:#0f0;">説明書</h2>
         <div style="padding: 15px; font-size: 13px; line-height: 1.8; background: #111; border: 1px solid #333; flex-grow: 1;">
             <p style="margin-top:0;"><strong>1. キャラ強化のやり方：</strong><br><span style="color:#ccc;">キャラをダブルタップで強化画面に移行します。</span></p>
-            <p><strong>2. 強者の間について：</strong><br><span style="color:#ccc;">強者の間に勝利するとボスキャラを10％の確率で手に入れることができます。</span></p>
-            <p><strong>3. ガチャについて：</strong><br><span style="color:#ccc;">通常ガチャは★6まで、上級ガチャは★7まで入ってます。</span></p>
+            <p><strong>2. 影の共有と対戦：</strong><br><span style="color:#ccc;">編成したメンバーを「影」としてサーバーに刻めます。相手がコードを入力して挑むことができます。</span></p>
+            <p><strong>3. スキルの並び替え：</strong><br><span style="color:#ccc;">強化画面の習得済スキルを長押ししてドラッグすると順番を入れ替えられます。影は上から順に使用します。</span></p>
         </div>
         <button onclick="closeManual()" style="height:45px; margin-top:15px;">拠点に戻る</button>
     </div>
@@ -260,7 +262,7 @@ const charData = [
     { name: '蛾', r: 1, p: 1, h: 3, m: 1, s: 2, skill: "鱗粉", cost: 1 }, { name: '犬', r: 2, p: 3, h: 6, m: 0, s: 4 },
     { name: '蜘蛛', r: 2, p: 4, h: 3, m: 1, s: 1, skill: "地獄の糸", cost: 1 }, { name: '梟', r: 2, p: 3, h: 5, m: 5, s: 5, skill: "賢者の知恵", cost: 2 },
     { name: '鮫', r: 4, p: 5, h: 7, m: 0, s: 5 }, { name: '蟋蟀', r: 2, p: 3, h: 2, m: 3, s: 3, skill: "レクイエム", cost: 3 },
-    { name: '龍', r: 5, p: 12, h: 30, m: 10, s: 5, skill: "咆咆", cost: 5 }, { name: '鳳', r: 5, p: 8, h: 20, m: 20, s: 15, skill: "転生", cost: 10 },
+    { name: '龍', r: 5, p: 12, h: 30, m: 10, s: 5, skill: "咆哮", cost: 5 }, { name: '鳳', r: 5, p: 8, h: 20, m: 20, s: 15, skill: "転生", cost: 10 },
     { name: '鼠', r: 1, p: 2, h: 2, m: 0, s: 2 }, { name: '蜥蜴', r: 2, p: 1, h: 2, m: 4, s: 4, skill: "身代わり", cost: 2 },
     { name: '甲虫', r: 2, p: 3, h: 4, m: 0, s: 1 }, { name: '熊', r: 4, p: 7, h: 10, m: 0, s: 3 },
     { name: '蛆', r: 1, p: 0, h: 1, m: 0, s: 1, skill: "再生", cost: 0, special: true },
@@ -361,12 +363,15 @@ let coins = 0, stones = 0, box = [], selectedIds = [], seeds = [], auras = [], w
 let isFirstGachaFree = true; 
 let isBossMode = false, currentBossName = null;
 let isDigMode = false, currentDigTier = 0; 
-let isShadowMode = false; // ★影モード追加
+let isShadowMode = false; 
 let maxClearedStage = 0, currentEndStage = 50; 
 let party = [], enemies = [], stage = 1, queue = [], qIdx = 0, isSelecting = false, currentAction = null, remainingActions = 0; 
 let darumaTrigger = null; 
 let isGlobalDomination = false;
 let selectedBattleSkill = null; 
+
+// スキル並び替え用変数
+let dragSrcIdx = null;
 
 function getSlotCost(type, currentSlots) {
     if (type === 'skill') {
@@ -766,6 +771,45 @@ function buySlot(type) {
     updateShopUI();
 }
 
+window.handleDragStart = function(e, idx) {
+    dragSrcIdx = idx;
+    e.dataTransfer.effectAllowed = 'move';
+    e.target.style.opacity = '0.4';
+};
+window.handleDragOver = function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+};
+window.handleDragEnter = function(e) { e.currentTarget.classList.add('over'); };
+window.handleDragLeave = function(e) { e.currentTarget.classList.remove('over'); };
+window.handleDrop = function(e, tgtIdx) {
+    e.stopPropagation();
+    e.currentTarget.classList.remove('over');
+    if (dragSrcIdx !== null && dragSrcIdx !== tgtIdx) {
+        const char = box.find(b => b.id === shopTargetId);
+        if (char && char.skills) {
+            let arr = [...char.skills];
+            while(arr.length < (char.maxSkillSlots||1)) arr.push(null);
+            
+            const temp = arr[dragSrcIdx];
+            arr[dragSrcIdx] = arr[tgtIdx];
+            arr[tgtIdx] = temp;
+            
+            char.skills = arr.filter(s => s !== null);
+            char.skill = char.skills[0] ? char.skills[0].name : "";
+            char.cost = char.skills[0] ? char.skills[0].cost : 1;
+            saveData();
+            updateShopUI();
+        }
+    }
+    return false;
+};
+window.handleDragEnd = function(e) {
+    e.target.style.opacity = '1';
+    dragSrcIdx = null;
+};
+
 function updateShopUI() {
     const char = box.find(b => b.id === shopTargetId); if(!char) return closeShop();
     let wpBonus = 0; if (char.weaponId) { const wp = weapons.find(w => w.id === char.weaponId); if (wp) wpBonus = getWeaponBonus(wp.name); }
@@ -795,16 +839,16 @@ function updateShopUI() {
         slotsHtml += `<div class="current-aura-display" style="color:#555; margin:2px 0;">枠${i+1}: 未装着</div>`;
     }
 
-    slotsHtml += `<div style="font-size:11px; color:#0c0; font-weight:bold; margin-top:8px; margin-bottom:4px;">【習得済みのスキル一覧】</div>`;
+    slotsHtml += `<div style="font-size:11px; color:#0c0; font-weight:bold; margin-top:8px; margin-bottom:4px;">【習得済みのスキル一覧】(ドラッグで順序変更)</div>`;
     for(let i=0; i<(char.maxSkillSlots||1); i++) {
         const sk = (char.skills || [])[i];
         if (sk) {
             let costLabel = "消費MP:" + (sk.cost||1);
             if(sk.name==='捨て身') costLabel = "消費HP:5";
             if(sk.name==='精霊の歌') costLabel = "HP半減";
-            slotsHtml += `<div class="current-aura-display" style="border-color:#050; background:#010; margin:2px 0;"><span style="color:#0f0;">枠${i+1}: 【${sk.name}】(${costLabel})</span><button onclick="forgetSkillAtIndex(${i})" style="font-size:10px; padding:2px 6px; border-color:#f55; color:#f58;">忘れる</button></div>`;
+            slotsHtml += `<div class="current-aura-display" draggable="true" ondragstart="handleDragStart(event, ${i})" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, ${i})" ondragend="handleDragEnd(event)" style="border-color:#050; background:#010; margin:2px 0; cursor:grab;"><span style="color:#0f0;">枠${i+1}: 【${sk.name}】(${costLabel})</span><button onclick="forgetSkillAtIndex(${i})" style="font-size:10px; padding:2px 6px; border-color:#f55; color:#f58;">忘れる</button></div>`;
         } else {
-            slotsHtml += `<div class="current-aura-display" style="border-color:#222; color:#555; background:#000; margin:2px 0;">枠${i+1}: 空きスロット</div>`;
+            slotsHtml += `<div class="current-aura-display" draggable="true" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, ${i})" style="border-color:#222; color:#555; background:#000; margin:2px 0;">枠${i+1}: 空きスロット</div>`;
         }
     }
     auZone.innerHTML = slotsHtml;
@@ -925,7 +969,8 @@ function setupBattleData(arr, isP) {
             ...c, curH: c.h, maxH: c.h, curM: c.m, maxM: c.m, p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s, 
             isP: isP, poison: false, guard: false, charm: 0, lastDmg: 0, 
             auras: activeAuras, skillsList: activeSkills, 
-            usedPhoenix: false, blind: 0, paralyze: 0, atkBuff: 0, invincible: 0, deathTrap: false
+            usedPhoenix: false, blind: 0, paralyze: 0, atkBuff: 0, invincible: 0, deathTrap: false,
+            nextSkillIndex: 0
         };
     });
 }
@@ -1031,15 +1076,50 @@ async function turn() {
         document.getElementById('btn-atk').disabled = true; document.getElementById('btn-skl').disabled = true; await new Promise(r => setTimeout(r, 600));
         const t_list = party.filter(p => p.curH > 0);
         if (t_list.length > 0) {
-            const enemySkillObj = u.skillsList ? u.skillsList[0] : null;
-            const enemySkill = enemySkillObj ? enemySkillObj.name : u.skill;
-            let costM = SKILL_DATA[enemySkill] ? SKILL_DATA[enemySkill].cost : (u.cost || 1);
-            let hasAoE = ['感電','咆哮','鱗粉','御廚子','巨大触手','炎のブレス','伏魔御廚子','ムチ','ブリザード','妖精の粉','攻撃増幅薬','蘇りの歌','強固な甲羅','天変地異','デスペラードヒューリー','グレイデンスレイヴ'].includes(enemySkill);
-            let canCast = (u.curM >= costM); if(enemySkill==='捨て身') canCast = (u.curH > 5); if(enemySkill==='精霊の歌') canCast = (u.curH > 1);
-            if ((hasAoE || ['毒牙','丸呑み','連撃','イーター','猛毒','達磨さんが転んだ','神の審判','マジ殴り','回復','閃光','斬撃','大回復','麻痺','捨て身','応援','支配','メテオ','デストラップ','フェニックス','精霊の歌'].includes(enemySkill)) && canCast) {
-                if (enemySkill === 'フェニックス' || enemySkill === '精霊の歌') { const deads = enemies.filter(e => e.curH <= 0); if(deads.length > 0) executeAction(u, deads[Math.floor(Math.random()*deads.length)], 'skill', enemySkill); else executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'attack'); }
-                else executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'skill', enemySkill);
-            } else executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'attack');
+            let skillToUse = null;
+            if (u.skillsList && u.skillsList.length > 0) {
+                if (u.nextSkillIndex === undefined) u.nextSkillIndex = 0;
+                let checked = 0;
+                while (checked < u.skillsList.length) {
+                    const s = u.skillsList[u.nextSkillIndex];
+                    if (s && s.name !== '再生' && s.name !== '不死の再生') {
+                        let costM = SKILL_DATA[s.name] ? SKILL_DATA[s.name].cost : (s.cost || 1);
+                        let canCast = (u.curM >= costM); 
+                        if(s.name==='捨て身') canCast = (u.curH > 5); 
+                        if(s.name==='精霊の歌') canCast = (u.curH > 1);
+                        if(s.oncePerMatch) canCast = !s.used;
+                        
+                        if (canCast) {
+                            skillToUse = s.name;
+                            u.nextSkillIndex = (u.nextSkillIndex + 1) % u.skillsList.length;
+                            break;
+                        }
+                    }
+                    u.nextSkillIndex = (u.nextSkillIndex + 1) % u.skillsList.length;
+                    checked++;
+                }
+            } else if (u.skill && u.skill !== '再生' && u.skill !== '不死の再生') {
+                let costM = SKILL_DATA[u.skill] ? SKILL_DATA[u.skill].cost : (u.cost || 1);
+                let canCast = (u.curM >= costM);
+                if(u.skill==='捨て身') canCast = (u.curH > 5);
+                if(canCast) skillToUse = u.skill;
+            }
+
+            if (skillToUse) {
+                let isBuffOrHeal = ['回復','大回復','妖精の粉','応援','攻撃増幅薬','強固な甲羅','フェニックス','蘇りの歌','精霊の歌'].includes(skillToUse);
+                if (skillToUse === 'フェニックス' || skillToUse === '蘇りの歌' || skillToUse === '精霊の歌') {
+                    const deads = enemies.filter(e => e.curH <= 0);
+                    if(deads.length > 0) executeAction(u, deads[Math.floor(Math.random()*deads.length)], 'skill', skillToUse);
+                    else executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'attack');
+                } else if (isBuffOrHeal) {
+                    const aliveAllies = enemies.filter(e => e.curH > 0);
+                    executeAction(u, aliveAllies[Math.floor(Math.random()*aliveAllies.length)], 'skill', skillToUse);
+                } else {
+                    executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'skill', skillToUse);
+                }
+            } else {
+                executeAction(u, t_list[Math.floor(Math.random()*t_list.length)], 'attack');
+            }
         } else next();
     }
 }
@@ -1208,7 +1288,6 @@ function next() {
         party.forEach(p => { p.curH = p.maxH; p.curM = p.m; p.poison = false; p.charm = 0; p.guard = false; p.usedPhoenix = false; });
         addLog("勝利！全員全回復した");
         
-        // ★ 影モードのクリア処理（報酬なし）
         if (isShadowMode) {
             addLog(`他者の影との手合わせが終了した！`);
             saveData();
@@ -1296,7 +1375,7 @@ window.onload = () => {
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, orderBy, limit, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, orderBy, limit, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyD2v_krmy0L-lzvLF6_AdoeI5dbXyJr4JM",
@@ -1310,17 +1389,15 @@ window.onload = () => {
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  let currentShadowList = []; // 取得した影リストを保持する変数
+  let currentShadowList = [];
 
-  // 1. 自分の影をアップロードする機能
   window.uploadMyShadow = async function() {
     if (selectedIds.length === 0) {
       return alert("アップロードする出撃メンバーを選んでください。");
     }
 
-    // ★ 名前とコードの入力
     const playerName = prompt("影の登録名を入力してください（未入力なら「名もなき者」になります）");
-    if (playerName === null) return; // キャンセル時
+    if (playerName === null) return;
 
     let shadowCode = prompt("検索・公開用の【4桁の数字】を入力してください（例: 1234）");
     if (shadowCode === null) return;
@@ -1328,27 +1405,25 @@ window.onload = () => {
 
     const myShadowParty = selectedIds.map(id => {
       const char = box.find(b => b.id === id);
+      const equippedAuras = (char.auraIds || []).map(aid => auras.find(a => a.id === aid)).filter(Boolean);
+      const equippedWeapon = char.weaponId ? weapons.find(w => w.id === char.weaponId) : null;
       return {
-        name: char.name,
-        r: char.r,
-        p: char.p,
-        h: char.h,
-        s: char.s,
-        m: char.m,
+        name: char.name, r: char.r, p: char.p, h: char.h, s: char.s, m: char.m,
         skills: char.skills || [],
-        auraIds: char.auraIds || [],
-        weaponId: char.weaponId || null
+        equippedAuras: equippedAuras,
+        equippedWeaponName: equippedWeapon ? equippedWeapon.name : null
       };
     });
 
     try {
       alert("影をサーバーに刻んでいます...");
-      await addDoc(collection(db, "shadows"), {
+      const docRef = await addDoc(collection(db, "shadows"), {
         party: myShadowParty,
         createdAt: serverTimestamp(),
         uploader: playerName || "名もなき者",
         code: shadowCode
       });
+      localStorage.setItem('kanji_rpg_v2_shadow_doc_id', docRef.id);
       alert(`アップロード完了！\nあなたの検索コードは【 ${shadowCode} 】です。友達に教えて対戦してもらいましょう！`);
     } catch (e) {
       console.error("アップロードエラー: ", e);
@@ -1356,18 +1431,30 @@ window.onload = () => {
     }
   };
 
-  // 2. 影リスト画面を開く
+  window.deleteMyShadow = async function() {
+    const docId = localStorage.getItem('kanji_rpg_v2_shadow_doc_id');
+    if (!docId) return alert("削除可能な影データが見つかりません。");
+    if (!confirm("本当に共有した自分の影を削除しますか？")) return;
+    try {
+      await deleteDoc(doc(db, "shadows", docId));
+      localStorage.removeItem('kanji_rpg_v2_shadow_doc_id');
+      alert("影の削除が完了しました。");
+    } catch (e) {
+      console.error(e);
+      alert("削除に失敗しました。");
+    }
+  };
+
   window.openShadowList = async function() {
     if (selectedIds.length === 0) return alert("自分の出撃メンバーを選んでください");
     
     document.getElementById('view-home').classList.remove('active');
     document.getElementById('view-shadow-list').classList.add('active');
-    document.getElementById('shadow-search-input').value = ""; // 検索窓リセット
+    document.getElementById('shadow-search-input').value = ""; 
     const listContainer = document.getElementById('shadow-list-container');
     listContainer.innerHTML = "<div style='text-align:center; padding-top:20px; color:#ff0;'>影の気配を探っています...</div>";
 
     try {
-      // 最新の影を30件取得してリスト表示
       const q = query(collection(db, "shadows"), orderBy("createdAt", "desc"), limit(30));
       const querySnapshot = await getDocs(q);
       currentShadowList = [];
@@ -1379,7 +1466,6 @@ window.onload = () => {
     }
   };
 
-  // 3. リストの描画処理
   window.renderShadowList = function(list) {
     const container = document.getElementById('shadow-list-container');
     if(list.length === 0) {
@@ -1397,7 +1483,6 @@ window.onload = () => {
     }).join('');
   };
 
-  // 4. コードで検索
   window.searchShadow = async function() {
     const code = document.getElementById('shadow-search-input').value;
     if(!/^\d{4}$/.test(code)) return alert("4桁の数字を入力してください");
@@ -1417,7 +1502,6 @@ window.onload = () => {
     }
   };
 
-  // 5. リストから選んでバトル開始
   window.startShadowBattleFromList = function(index) {
     const shadow = currentShadowList[index];
     const shadowName = shadow.uploader || "名もなき者";
@@ -1432,15 +1516,36 @@ window.onload = () => {
     party = setupBattleData(selectedIds.map(sid => box.find(b => b.id === sid)), true);
     document.getElementById('header-stage-label').innerText = `影の領域 - ${shadowName}`;
 
-    // ダウンロードした影データを敵として変換 (idを適当に付与)
-    enemies = setupBattleData(shadow.party.map((c, i) => ({...c, id: 800+i})), false);
+    enemies = shadow.party.map((c, i) => {
+        let wpBonus = 0;
+        let hasTrueGreyden = false;
+        if (c.equippedWeaponName) {
+            wpBonus = getWeaponBonus(c.equippedWeaponName);
+            if (c.equippedWeaponName === "真・グレイデンの剣") hasTrueGreyden = true;
+        }
+        
+        let activeAuras = c.equippedAuras || [];
+        let activeSkills = c.skills || [];
+        if (hasTrueGreyden && !activeSkills.some(s => s.name === 'グレイデンスレイヴ')) {
+            activeSkills.push({ name: 'グレイデンスレイヴ', cost: 0, oncePerMatch: true, used: false });
+        }
+
+        return {
+            ...c, id: 800+i,
+            curH: c.h, maxH: c.h, curM: c.m, maxM: c.m,
+            p: c.p + wpBonus, baseP: c.p + wpBonus, baseS: c.s,
+            isP: false, poison: false, guard: false, charm: 0, lastDmg: 0,
+            auras: activeAuras, skillsList: activeSkills,
+            usedPhoenix: false, blind: 0, paralyze: 0, atkBuff: 0, invincible: 0, deathTrap: false,
+            nextSkillIndex: 0
+        };
+    });
     
     document.getElementById('log').innerText = ""; 
     addLog(`--- プレイヤー【 ${shadowName} 】の影と対峙した！ ---`); 
     cycle();
   };
 
-  // リスト画面を閉じる
   window.closeShadowList = function() {
     document.getElementById('view-shadow-list').classList.remove('active');
     document.getElementById('view-home').classList.add('active');
